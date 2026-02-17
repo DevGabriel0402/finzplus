@@ -1,0 +1,48 @@
+import * as FiIcons from "react-icons/fi";
+
+export const ICONES_DISPONIVEIS = [
+  "FiDollarSign",
+  "FiTrendingUp",
+  "FiHome",
+  "FiPieChart",
+  "FiBarChart2",
+  "FiActivity",
+  "FiBriefcase",
+  "FiCreditCard",
+  "FiShoppingBag",
+  "FiShoppingCart",
+  "FiGrid",
+  "FiTarget",
+  "FiZap",
+  "FiShield",
+  "FiStar",
+  "FiAward",
+  "FiLayers",
+  "FiSettings",
+  "FiCpu",
+  "FiMonitor",
+  "FiMoon",
+  "FiSun",
+  "FiHeart",
+  "FiBookOpen",
+  "FiGlobe",
+  "FiDatabase",
+  "FiUser",
+  "FiUsers",
+  "FiGift",
+  "FiTruck",
+  "FiMapPin",
+  "FiWifi",
+  "FiPhone",
+  "FiFilm",
+  "FiMusic",
+  "FiScissors",
+  "FiTool",
+  "FiAirplane",
+  "FiCalendar",
+  "FiTag",
+];
+
+export function obterIcone(nome) {
+  return FiIcons[nome] || FiIcons.FiDollarSign;
+}

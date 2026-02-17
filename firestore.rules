@@ -1,0 +1,98 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function logado() {
+      return request.auth != null;
+    }
+
+    function dono(uid) {
+      return logado() && request.auth.uid == uid;
+    }
+
+    function isString(v) {
+      return v is string && v.size() > 0;
+    }
+
+    function isTipoLancamento(v) {
+      return v == 'entrada' || v == 'saida';
+    }
+
+    function isDataISO(v) {
+      // formato simples: YYYY-MM-DD (não valida calendário, mas já barra lixo)
+      return v.matches('^\\d{4}-\\d{2}-\\d{2}$');
+    }
+
+    function isMesRef(v) {
+      // formato: YYYY-MM
+      return v.matches('^\\d{4}-\\d{2}$');
+    }
+
+    // 🔥 novo: valida nome do painel (evita string enorme)
+    function isNomePainelValido(v) {
+      return v is string && v.size() >= 2 && v.size() <= 40;
+    }
+
+    match /usuarios/{uid} {
+      allow read, create, update, delete: if dono(uid);
+
+      match /categorias/{categoriaId} {
+        allow read, create, update, delete: if dono(uid);
+      }
+
+      match /origensDestinos/{id} {
+        allow read, create, update, delete: if dono(uid);
+      }
+
+      match /contas/{contaId} {
+        allow read, create, update, delete: if dono(uid);
+      }
+
+      // ✅ NOVO: configurações do painel
+      // usuarios/{uid}/configuracoes/painel
+      match /configuracoes/{docId} {
+        allow read: if dono(uid);
+
+        // libera criar/atualizar só com campos válidos (você pode relaxar se quiser)
+        allow create, update: if dono(uid)
+          && (!('nomePainel' in request.resource.data) || isNomePainelValido(request.resource.data.nomePainel));
+
+        allow delete: if dono(uid);
+      }
+
+      match /lancamentos/{lancamentoId} {
+        allow read: if dono(uid);
+
+        // CREATE: exige campos essenciais do MVP
+        allow create: if dono(uid)
+          && isTipoLancamento(request.resource.data.tipo)
+          && (request.resource.data.valor is number) && request.resource.data.valor > 0
+          && isString(request.resource.data.descricao)
+          && isDataISO(request.resource.data.data)
+          && isMesRef(request.resource.data.mesRef)
+          && isString(request.resource.data.categoria)
+          && isString(request.resource.data.origemDestino)
+          && isString(request.resource.data.conta);
+
+        // UPDATE: mantém o mesmo padrão; permite atualizar qualquer subset,
+        // mas valida se os campos existirem no patch.
+        allow update: if dono(uid)
+          && (!('tipo' in request.resource.data) || isTipoLancamento(request.resource.data.tipo))
+          && (!('valor' in request.resource.data) || ((request.resource.data.valor is number) && request.resource.data.valor > 0))
+          && (!('descricao' in request.resource.data) || isString(request.resource.data.descricao))
+          && (!('data' in request.resource.data) || isDataISO(request.resource.data.data))
+          && (!('mesRef' in request.resource.data) || isMesRef(request.resource.data.mesRef))
+          && (!('categoria' in request.resource.data) || isString(request.resource.data.categoria))
+          && (!('origemDestino' in request.resource.data) || isString(request.resource.data.origemDestino))
+          && (!('conta' in request.resource.data) || isString(request.resource.data.conta));
+
+        allow delete: if dono(uid);
+      }
+    }
+
+    // Bloqueia qualquer coisa fora de /usuarios/{uid}/...
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
