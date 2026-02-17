@@ -10,6 +10,7 @@ import Cadastro from "../pages/publico/Cadastro";
 
 import Dashboard from "../pages/app/Dashboard";
 import Lancamentos from "../pages/app/Lancamentos";
+import Relatorios from "../pages/app/Relatorios";
 
 import Configuracoes from "../pages/app/Configuracoes";
 import LoadingFinanceiro from "../ui/LoadingFinanceiro";
@@ -46,6 +47,7 @@ export default function Rotas() {
       >
         <Route path="/" element={<Dashboard />} />
         <Route path="/lancamentos" element={<Lancamentos />} />
+        <Route path="/relatorios" element={<Relatorios />} />
         <Route path="/configuracoes" element={<Configuracoes />} />
       </Route>
 

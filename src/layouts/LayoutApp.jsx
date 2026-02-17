@@ -1,6 +1,6 @@
 import React, { useMemo } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
-import { FiHome, FiList, FiMoon, FiSun, FiSettings, FiLogOut } from "react-icons/fi";
+import { FiHome, FiList, FiMoon, FiSun, FiSettings, FiLogOut, FiPieChart } from "react-icons/fi";
 import { useTema } from "../hooks/useTema";
 import { useConfig } from "../hooks/useConfig";
 import { obterIcone } from "../data/iconesPainel";
@@ -27,6 +27,7 @@ import {
 function obterTituloDaRota(rota) {
   if (rota === "/") return "Dashboard";
   if (rota.startsWith("/lancamentos")) return "Lançamentos";
+  if (rota.startsWith("/relatorios")) return "Relatórios";
   if (rota.startsWith("/configuracoes")) return "Configurações";
   return "Painel";
 }
@@ -92,6 +93,13 @@ export default function LayoutApp() {
           </ItemMenu>
 
           <ItemMenu
+            $ativo={rota.startsWith("/relatorios")}
+            onClick={() => ir("/relatorios")}
+          >
+            <FiPieChart /> Relatórios
+          </ItemMenu>
+
+          <ItemMenu
             $ativo={rota.startsWith("/configuracoes")}
             onClick={() => ir("/configuracoes")}
           >
@@ -152,6 +160,13 @@ export default function LayoutApp() {
               onClick={() => ir("/lancamentos")}
             >
               <FiList /> Lista
+            </Tab>
+
+            <Tab
+              $ativo={rota.startsWith("/relatorios")}
+              onClick={() => ir("/relatorios")}
+            >
+              <FiPieChart /> Relatórios
             </Tab>
 
             <Tab
