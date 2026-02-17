@@ -40,11 +40,20 @@ function agruparSaidasPorDia(saidas, mesRef) {
   const mapa = new Map(dias.map((dia) => [dia, 0]));
 
   for (const s of saidas) {
-    const data = s?.data;
-    if (!data || typeof data !== "string") continue;
-    if (!data.startsWith(mesRef)) continue;
+    // Lógica para definir a 'data efetiva' do gasto no gráfico:
+    // Se não for pago, ignora (saldo real / caixa).
+    if (s.status !== "pago") continue;
 
-    const dia = data.slice(8, 10);
+    let dataEfetiva = s.pagoEm;
+
+    if (!dataEfetiva || typeof dataEfetiva !== "string") continue;
+
+    // Opcional: só soma no gráfico se a data efetiva for dentro do mês atual do dashboard.
+    // Se o user pagou antecipado (mês anterior) ou atrasado (mês seguinte), 
+    // e estamos visualizando este mêsRef, teoricamente não apareceria neste dias[].
+    if (!dataEfetiva.startsWith(mesRef)) continue;
+
+    const dia = dataEfetiva.slice(8, 10);
     mapa.set(dia, (mapa.get(dia) || 0) + (s.valor || 0));
   }
 
@@ -83,16 +92,41 @@ export default function Dashboard() {
   const entradas = useMemo(() => lancamentos.filter((l) => l.tipo === "entrada"), [lancamentos]);
   const saidas = useMemo(() => lancamentos.filter((l) => l.tipo === "saida"), [lancamentos]);
 
+  // Função auxiliar para somar apenas o que "cai" neste mês (Regime de Caixa adaptado)
+  const calcularTotalConsiderandoPagamento = (lista) => {
+    return lista.reduce((acc, item) => {
+      // Se não for pago, ignora (saldo real / caixa).
+      if (item.status !== "pago") return acc;
+
+      let dataEfetiva = item.pagoEm;
+
+      // Se a data efetiva pertencer ao mês atual (mesRef), soma.
+      if (dataEfetiva && dataEfetiva.startsWith(mesRef)) {
+        return acc + (item.valor || 0);
+      }
+      return acc;
+    }, 0);
+  };
+
   const totalEntradas = useMemo(
-    () => entradas.reduce((a, l) => a + (l.valor || 0), 0),
-    [entradas],
-  );
-  const totalSaidas = useMemo(
-    () => saidas.reduce((a, l) => a + (l.valor || 0), 0),
-    [saidas],
+    () => calcularTotalConsiderandoPagamento(entradas),
+    [entradas, mesRef],
   );
 
-  const dadosBarras = useMemo(() => agruparSomar(entradas, "origemDestino"), [entradas]);
+  const totalSaidas = useMemo(
+    () => calcularTotalConsiderandoPagamento(saidas),
+    [saidas, mesRef],
+  );
+
+  const dadosBarras = useMemo(() => {
+    // Agora o gráfico de "Entradas por origem" também só mostra o que foi pago NO MÊS.
+    const entradasEfetivas = entradas.filter((item) => {
+      if (item.status !== "pago") return false;
+      const dataEfetiva = item.pagoEm;
+      return dataEfetiva && dataEfetiva.startsWith(mesRef);
+    });
+    return agruparSomar(entradasEfetivas, "origemDestino");
+  }, [entradas, mesRef]);
 
   const dadosLinhaGastosPorDia = useMemo(() => agruparSaidasPorDia(saidas, mesRef), [saidas, mesRef]);
 
