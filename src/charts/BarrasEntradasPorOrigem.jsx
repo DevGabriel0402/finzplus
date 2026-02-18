@@ -21,7 +21,10 @@ export default function BarrasEntradasPorOrigem({ dados }) {
           <YAxis tickFormatter={(value) => formatarDinheiro(value)} />
           <Tooltip formatter={(value) => formatarDinheiro(value)} />
           <Legend />
-          <Bar dataKey="valor" name="Valor" />
+          <Bar
+            dataKey="valor"
+            name="Valor"
+            fill="currentColor" />
         </BarChart>
       </ResponsiveContainer>
     </div>
