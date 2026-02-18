@@ -37,6 +37,8 @@ import {
   FiShoppingCart,
   FiCalendar,
 } from "react-icons/fi";
+import { Pix, MasterCard, Boleto, Dinheiro } from "../../../ui/icons.jsx";
+import { BiTransferAlt } from "react-icons/bi";
 
 const GridSelects = styled.div`
   display: grid;
@@ -204,12 +206,12 @@ export default function FormNovoLancamento({
   // CONTA / FORMA PAGAMENTO
   // =========================
   const opcoesConta = [
-    { value: "Pix", label: "Pix", icon: FiDollarSign },
-    { value: "Débito", label: "Débito", icon: FiCreditCard },
-    { value: "Crédito", label: "Crédito", icon: FiCreditCard },
-    { value: "Boleto", label: "Boleto", icon: FiDollarSign },
-    { value: "Transferência", label: "Transferência", icon: FiDollarSign },
-    { value: "Dinheiro", label: "Dinheiro", icon: FiDollarSign },
+    { value: "Pix", label: "Pix", icon: Pix },
+    { value: "Débito", label: "Débito", icon: MasterCard },
+    { value: "Crédito", label: "Crédito", icon: MasterCard },
+    { value: "Boleto", label: "Boleto", icon: Boleto },
+    { value: "Transferência", label: "Transferência", icon: BiTransferAlt },
+    { value: "Dinheiro", label: "Dinheiro", icon: Dinheiro },
   ];
 
   // =========================
@@ -225,7 +227,7 @@ export default function FormNovoLancamento({
 
   return (
     <Card>
-      <h4 style={{ marginTop: 0 }}>Novo lançamento (vai para “A pagar”)</h4>
+      <h4 style={{ marginTop: 0 }}>Novo lançamento (vai para “Pendente”)</h4>
 
       <form onSubmit={onCriar} style={{ display: "grid", gap: 12 }}>
         <div>
@@ -288,12 +290,12 @@ export default function FormNovoLancamento({
           </div>
 
           <div>
-            <Label>Conta</Label>
+            <Label>Forma de Pagamento</Label>
             <SelectCustomizado
               value={conta}
               onChange={(e) => setConta(e.target.value)}
               options={opcoesConta}
-              placeholder="Selecione a conta"
+              placeholder="Selecione a forma de pagamento"
             />
           </div>
         </GridSelects>

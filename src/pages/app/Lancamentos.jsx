@@ -8,6 +8,7 @@ import {
   listarLancamentosSemIndice,
   marcarComoPago,
   marcarComoPendente,
+  atualizarLancamento,
 } from "../../services/lancamentos";
 
 import { hojeISO, mesRefDeDataISO } from "../../utils/datas";
@@ -31,12 +32,42 @@ export default function Lancamentos() {
   const [origemDestino, setOrigemDestino] = useState("Conta de Luz");
   const [conta, setConta] = useState("Pix");
 
+  // ✅ Estado de edição
+  const [itemEmEdicao, setItemEmEdicao] = useState(null);
+
+  function onEditar(item) {
+    if (!item) return;
+    setItemEmEdicao(item);
+  }
+
+  function onCancelarEdicao() {
+    setItemEmEdicao(null);
+    setDescricao("");
+    setValor(formatarMoedaBRLInput(""));
+    setTipo("saida");
+    // mantemos data/categoria/etc ou resetamos? Reset básico:
+    setData(hojeISO());
+  }
+
   async function carregar() {
     if (!usuario?.uid) return;
     setCarregando(true);
 
     try {
-      const dados = await listarLancamentosSemIndice(usuario.uid, mesRef, aba);
+      let statusFiltro = null;
+      let tipoFiltro = null;
+
+      if (aba === "pendente") {
+        statusFiltro = "pendente";
+        tipoFiltro = "saida"; // Pendente de pagamento (apenas saídas)
+      } else if (aba === "pago") {
+        statusFiltro = "pago";
+        tipoFiltro = "saida"; // Pagos (apenas saídas)
+      } else if (aba === "entrada") {
+        tipoFiltro = "entrada"; // Entradas (independente do status, geralmente 'pago' ou 'pendente')
+      }
+
+      const dados = await listarLancamentosSemIndice(usuario.uid, mesRef, statusFiltro, tipoFiltro);
       setLista(dados);
     } catch (e) {
       console.log("ERRO AO CARREGAR LANÇAMENTOS:", e?.code, e?.message, e);
@@ -71,10 +102,12 @@ export default function Lancamentos() {
       return toast.error("Informe um valor válido.", { id: "erro-valor" });
     if (!cat) return toast.error("Categoria é obrigatória.", { id: "erro-categoria" });
     if (!od) return toast.error("Origem/Destino é obrigatório.", { id: "erro-od" });
-    if (!cta) return toast.error("Conta é obrigatória.", { id: "erro-conta" });
+    if (!cta) return toast.error("Forma de Pagamento é obrigatória.", { id: "erro-conta" });
 
     const dataFinal = data || hojeISO();
     const mesRefFinal = mesRefDeDataISO(dataFinal);
+
+
 
     try {
       await criarLancamento(usuario.uid, {
@@ -95,11 +128,31 @@ export default function Lancamentos() {
 
       // Mostra o item criado
       if (mesRef !== mesRefFinal) setMesRef(mesRefFinal);
-      if (aba !== "pendente") setAba("pendente");
-      else await carregar();
+      if (tipo === "entrada") {
+        if (aba !== "entrada") setAba("entrada");
+        else await carregar();
+      } else {
+        if (aba !== "pendente") setAba("pendente");
+        else await carregar();
+      }
     } catch (e2) {
       console.log("ERRO AO CRIAR:", e2?.code, e2?.message, e2);
       toast.error("Erro ao criar lançamento.", { id: "erro-criar" });
+    }
+  }
+
+  async function onSalvarEdicao(id, dados) {
+    try {
+      const mesRefEditado = mesRefDeDataISO(dados.data);
+      await atualizarLancamento(usuario.uid, id, {
+        ...dados,
+        mesRef: mesRefEditado
+      });
+      toast.success("Editado com sucesso!");
+      setItemEmEdicao(null);
+      await carregar();
+    } catch (e) {
+      toast.error("Erro ao editar.");
     }
   }
 
@@ -159,6 +212,11 @@ export default function Lancamentos() {
       lista={lista}
       onTogglePago={onTogglePago}
       onExcluir={onExcluir}
+      // ✅ Props de edição (Modal)
+      itemEmEdicao={itemEmEdicao}
+      onEditar={onEditar}
+      onSalvarEdicao={onSalvarEdicao}
+      onCancelarEdicao={onCancelarEdicao}
     />
   );
 }

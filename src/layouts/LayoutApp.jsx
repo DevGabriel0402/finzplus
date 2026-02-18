@@ -19,6 +19,7 @@ import {
   Titulo,
   AcoesTop,
   BotaoIcone,
+  BotaoIconeMobile,
   Tabbar,
   Tabs,
   Tab,
@@ -135,6 +136,9 @@ export default function LayoutApp() {
             </div>
 
             <AcoesTop>
+              <BotaoIconeMobile onClick={() => ir("/configuracoes")} title="Configurações">
+                <FiSettings />
+              </BotaoIconeMobile>
               <BotaoIcone onClick={alternarTema}>
                 {modo === "dark" ? <FiSun /> : <FiMoon />}
               </BotaoIcone>
@@ -169,12 +173,7 @@ export default function LayoutApp() {
               <FiPieChart /> Relatórios
             </Tab>
 
-            <Tab
-              $ativo={rota.startsWith("/configuracoes")}
-              onClick={() => ir("/configuracoes")}
-            >
-              <FiSettings /> Config
-            </Tab>
+
           </Tabs>
         </Tabbar>
       </Conteudo>

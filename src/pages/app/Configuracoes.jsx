@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useTheme } from "styled-components";
 import toast from "react-hot-toast";
 import { useConfig } from "../../hooks/useConfig";
 import { Card } from "../../ui/Base";
@@ -8,6 +9,7 @@ import { ICONES_DISPONIVEIS, obterIcone } from "../../data/iconesPainel";
 
 export default function Configuracoes() {
   const { config, atualizarConfig, carregando } = useConfig();
+  const theme = useTheme();
 
   const [nomePainel, setNomePainel] = useState(config.nomePainel);
   const [iconePainel, setIconePainel] = useState(config.iconePainel);
@@ -80,9 +82,15 @@ export default function Configuracoes() {
                     background: "transparent",
                     display: "grid",
                     placeItems: "center",
+
                   }}
                 >
-                  <Icon size={20} />
+
+                  <Icon
+                    size={20}
+                    color={iconePainel === nome ? "#16a34a" : theme.cores.texto}
+                  />
+
                 </button>
               );
             })}

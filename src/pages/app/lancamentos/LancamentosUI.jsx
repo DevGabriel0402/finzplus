@@ -1,4 +1,5 @@
 import React from "react";
+import { formatarMesAno } from "../../../utils/datas";
 import { Linha } from "../../../ui/Base";
 import { Label } from "../../../ui/Campo";
 import { CampoData } from "../../../ui/CampoData.jsx";
@@ -6,6 +7,7 @@ import { CampoData } from "../../../ui/CampoData.jsx";
 import AbasStatus from "./AbaStatus";
 import FormNovoLancamento from "./FormNovoLancamento";
 import ListaLancamentos from "./ListaLancamentos";
+import ModalEditarLancamento from "./ModalEditarLancamento";
 
 export default function LancamentosUI({
   mesRef,
@@ -23,12 +25,29 @@ export default function LancamentosUI({
   lista,
   onTogglePago,
   onExcluir,
+  itemEmEdicao,
+  onEditar,
+  onSalvarEdicao,
+  onCancelarEdicao,
 }) {
-  const tituloAba = aba === "pendente" ? "A pagar" : "Pagos";
+  let tituloAba = "";
+  if (aba === "pendente") tituloAba = "Pendente";
+  else if (aba === "pago") tituloAba = "Pagos";
+  else if (aba === "entrada") tituloAba = "Entradas";
 
   return (
     <div style={{ display: "grid", gap: 16 }}>
+      {/* Modal de Edição */}
+      {itemEmEdicao && (
+        <ModalEditarLancamento
+          item={itemEmEdicao}
+          onSalvar={onSalvarEdicao}
+          onFechar={onCancelarEdicao}
+        />
+      )}
+
       <Linha>
+        {/* ... header same ... */}
         <div style={{ display: "grid", gap: 4 }}>
           <h3 style={{ margin: 0 }}>Lançamentos</h3>
           <div style={{ color: "#9ca3af", fontSize: 12 }}>
@@ -49,6 +68,7 @@ export default function LancamentosUI({
 
       <AbasStatus aba={aba} onMudarAba={setAba} qtd={qtdAba} total={totalAba} />
 
+      {/* Form apenas para criar */}
       <FormNovoLancamento
         tipo={form.tipo}
         setTipo={form.setTipo}
@@ -68,16 +88,20 @@ export default function LancamentosUI({
       />
 
       <ListaLancamentos
-        titulo={`${tituloAba} (${mesRef})`}
+        titulo={`${tituloAba} (${formatarMesAno(mesRef)})`}
         subtitulo={
           aba === "pendente"
             ? "Marque como pago para mover para “Pagos”."
-            : "Desmarque para voltar para “A pagar”."
+            : aba === "pago"
+              ? "Desmarque para voltar para “Pendente”."
+              : "Registro de ingressos."
         }
         carregando={carregando}
         lista={lista}
         onTogglePago={onTogglePago}
         onExcluir={onExcluir}
+        // ✅ Edição
+        onEditar={onEditar}
       />
     </div>
   );

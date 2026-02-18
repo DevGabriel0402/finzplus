@@ -152,6 +152,14 @@ export const BotaoIcone = styled.button`
   }
 `;
 
+export const BotaoIconeMobile = styled(BotaoIcone)`
+  display: none;
+
+  @media (max-width: 900px) {
+    display: grid;
+  }
+`;
+
 export const Tabbar = styled.footer`
   display: none;
 

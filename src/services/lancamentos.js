@@ -68,9 +68,10 @@ export async function listarLancamentos(uid, mesRef, status = null) {
  * ✅ Versão SEM ÍNDICE: evita erro de índice composto.
  * Busca por mesRef (+ status opcional) e ordena no front.
  */
-export async function listarLancamentosSemIndice(uid, mesRef, status = null) {
+export async function listarLancamentosSemIndice(uid, mesRef, status = null, tipo = null) {
   const filtros = [where("mesRef", "==", mesRef)];
   if (status) filtros.push(where("status", "==", status));
+  if (tipo) filtros.push(where("tipo", "==", tipo));
 
   const q = query(colLancamentos(uid), ...filtros);
 

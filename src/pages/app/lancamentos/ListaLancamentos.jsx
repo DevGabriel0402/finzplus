@@ -9,6 +9,7 @@ export default function ListaLancamentos({
   lista,
   onTogglePago,
   onExcluir,
+  onEditar,
 }) {
   return (
     <Card>
@@ -29,6 +30,7 @@ export default function ListaLancamentos({
               item={item}
               onTogglePago={onTogglePago}
               onExcluir={onExcluir}
+              onEditar={onEditar}
             />
           ))}
         </div>

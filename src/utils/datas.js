@@ -9,3 +9,13 @@ export function hojeISO() {
 export function mesRefDeDataISO(dataISO) {
     return dataISO.slice(0, 7); // "YYYY-MM"
 }
+export function formatarMesAno(mesRef) {
+    if (!mesRef) return "";
+    const [ano, mes] = mesRef.split("-");
+    const meses = [
+        "jan", "fev", "mar", "abr", "mai", "jun",
+        "jul", "ago", "set", "out", "nov", "dez"
+    ];
+    const mesIndex = parseInt(mes) - 1;
+    return `${meses[mesIndex]}/${ano}`;
+}

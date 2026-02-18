@@ -119,7 +119,8 @@ export function SelectCustomizado({
     return () => document.removeEventListener("mousedown", handleClickFora);
   }, []);
 
-  const opcaoSelecionada = options.find((opt) => opt.value === value);
+  const safeOptions = options || [];
+  const opcaoSelecionada = safeOptions.find((opt) => opt.value === value);
   const textoSelecionado = opcaoSelecionada?.label || placeholder;
   const IconeSelecionado = opcaoSelecionada?.icon || null;
 
@@ -141,7 +142,7 @@ export function SelectCustomizado({
 
       {aberto && (
         <SelectDropdown>
-          {options.map((opt) => (
+          {safeOptions.map((opt) => (
             <SelectOption
               key={opt.value}
               $selected={value === opt.value}

@@ -1,8 +1,7 @@
 import React from "react";
 import styled from "styled-components";
 import { Linha } from "../../../ui/Base";
-import { BotaoPerigo } from "../../../ui/Botao";
-import Checkbox from "../../../ui/Checkbox";
+import { FiEdit2, FiTrash2, FiCheckCircle, FiCircle } from "react-icons/fi";
 
 const CardItem = styled.div`
   border: 1px solid ${({ theme }) => theme.cores.borda};
@@ -11,19 +10,23 @@ const CardItem = styled.div`
   display: grid;
   gap: 10px;
   transition: all 0.2s ease;
-  background: ${({ tipo, theme }) =>
-    tipo === "entrada"
-      ? "rgba(34, 197, 94, 0.08)"
-      : tipo === "saida"
-        ? "rgba(239, 68, 68, 0.08)"
-        : theme.cores.superficie};
+  background: ${({ $tipo, $status, theme }) =>
+    $status === "pago"
+      ? "rgba(34, 197, 94, 0.15)" // Verde clean para pagos
+      : $tipo === "entrada"
+        ? "rgba(34, 197, 94, 0.04)"
+        : $tipo === "saida"
+          ? "rgba(239, 68, 68, 0.04)"
+          : theme.cores.superficie};
 
   &:hover {
-    background: ${({ tipo, theme }) =>
-      tipo === "entrada"
-        ? "rgba(34, 197, 94, 0.12)"
-        : tipo === "saida"
-          ? "rgba(239, 68, 68, 0.12)"
+    background: ${({ $tipo, $status, theme }) =>
+    $status === "pago"
+      ? "rgba(34, 197, 94, 0.25)"
+      : $tipo === "entrada"
+        ? "rgba(34, 197, 94, 0.08)"
+        : $tipo === "saida"
+          ? "rgba(239, 68, 68, 0.08)"
           : theme.cores.hover};
   }
 `;
@@ -31,41 +34,17 @@ const CardItem = styled.div`
 const Valor = styled.div`
   font-weight: 600;
   font-size: 15px;
-  color: ${({ tipo, theme }) =>
-    tipo === "entrada" ? theme.cores.sucesso : theme.cores.erro};
-
-  &.valor-mobile {
-    display: none;
-
-    @media (max-width: 768px) {
-      display: block;
-    }
-  }
-
-  &.valor-desktop {
-    display: block;
-
-    @media (max-width: 768px) {
-      display: none;
-    }
-  }
+  color: ${({ $tipo, theme }) =>
+    $tipo === "entrada" ? theme.cores.sucesso : theme.cores.erro};
+  white-space: nowrap;
 `;
 
 const LinhaResponsiva = styled(Linha)`
-  @media (max-width: 768px) {
-    flex-direction: column;
-    align-items: flex-start !important;
-    gap: 12px;
-  }
-`;
-
-const RodapeItem = styled.div`
-  display: flex;
-  justify-content: flex-end;
-
-  @media (max-width: 768px) {
-    justify-content: space-between;
-    align-items: center;
+  flex-wrap: nowrap;
+  gap: 12px;
+  
+  @media (max-width: 600px) {
+    flex-wrap: wrap;
   }
 `;
 
@@ -78,58 +57,103 @@ const Chip = styled.span`
   color: ${({ theme }) => theme.cores.textoFraco};
 `;
 
-export default function ItemLancamento({ item, onTogglePago, onExcluir }) {
+const ActionButton = styled.button`
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, color 0.2s;
+  color: #9ca3af;
+
+  &:hover {
+    background: rgba(0,0,0,0.05);
+    color: #374151;
+  }
+
+  &.edit:hover { color: #3b82f6; }
+  &.pay:hover { color: #16a34a; }
+  &.delete:hover { color: #ef4444; }
+`;
+
+// Helper format date BR
+function formatarDataBR(dataISO) {
+  if (!dataISO) return "";
+  // dataISO = YYYY-MM-DD
+  const [ano, mes, dia] = dataISO.split("-");
+  return `${dia}/${mes}/${ano}`;
+}
+
+export default function ItemLancamento({ item, onTogglePago, onExcluir, onEditar }) {
   const pago = item.status === "pago";
 
   return (
-    <CardItem tipo={item.tipo}>
-      <LinhaResponsiva>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <Checkbox checked={pago} onChange={() => onTogglePago(item)} tipo={item.tipo} />
+    <CardItem $tipo={item.tipo} $status={item.status}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
 
-          <div>
-            <div style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
-              <b
-                style={{
-                  textDecoration: pago ? "line-through" : "none",
-                  opacity: pago ? 0.7 : 1,
-                }}
-              >
-                {item.descricao}
-              </b>
+        {/* Esquerda: Info */}
+        <div style={{ display: "flex", flexDirection: 'column', gap: 4 }}>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: 'wrap' }}>
+            <b style={{
+              fontSize: '1rem',
+              color: '#1f2937',
+            }}>
+              {item.descricao}
+            </b>
+            <span style={{ fontSize: '0.9rem', color: '#6b7280' }}>
+              - {formatarDataBR(item.data)}
+            </span>
+          </div>
 
-              <span style={{ color: "#9ca3af", fontSize: 12 }}>
-                venc: {item.data}
-                {pago && item.pagoEm ? ` · pago: ${item.pagoEm}` : ""}
-              </span>
-            </div>
-
-            <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
-              <Chip>{item.categoria}</Chip>
-              <Chip>{item.origemDestino}</Chip>
-              <Chip>{item.conta}</Chip>
-            </div>
+          <div style={{ display: "flex", gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
+            <Chip>{item.categoria}</Chip>
+            <Chip>{item.origemDestino}</Chip>
+            <Chip>{item.conta}</Chip>
+            {pago && <Chip style={{ borderColor: '#16a34a', color: '#16a34a' }}>Pago</Chip>}
           </div>
         </div>
 
-        <Valor tipo={item.tipo} className="valor-desktop">
-          <span>R$</span>
-          {item.tipo === "entrada" ? "+" : "-"}
-          {(item.valor || 0).toFixed(2)}
-        </Valor>
-      </LinhaResponsiva>
+        {/* Direita: Valor e Ações */}
+        <div style={{ display: "flex", flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
+          <Valor $tipo={item.tipo}>
+            R$ {item.tipo === "entrada" ? "+" : "-"}{(item.valor || 0).toFixed(2)}
+          </Valor>
 
-      <RodapeItem>
-        <Valor tipo={item.tipo} className="valor-mobile">
-          <span>R$</span>
-          {item.tipo === "entrada" ? "+" : "-"}
-          {(item.valor || 0).toFixed(2)}
-        </Valor>
+          <div style={{ display: 'flex', gap: 4 }}>
+            {/* EDIT */}
+            <ActionButton
+              className="edit"
+              title="Editar"
+              onClick={() => onEditar(item)}
+            >
+              <FiEdit2 size={16} />
+            </ActionButton>
 
-        <BotaoPerigo type="button" onClick={() => onExcluir(item.id)}>
-          Excluir
-        </BotaoPerigo>
-      </RodapeItem>
+            {/* PAY TOGGLE */}
+            <ActionButton
+              className="pay"
+              title={pago ? "Marcar como pendente" : "Marcar como pago"}
+              onClick={() => onTogglePago(item)}
+              style={{ color: pago ? '#16a34a' : '#9ca3af' }}
+            >
+              {pago ? <FiCheckCircle size={18} /> : <FiCircle size={18} />}
+            </ActionButton>
+
+            {/* DELETE */}
+            <ActionButton
+              className="delete"
+              title="Excluir"
+              onClick={() => onExcluir(item.id)}
+            >
+              <FiTrash2 size={16} />
+            </ActionButton>
+          </div>
+        </div>
+
+      </div>
     </CardItem>
   );
 }
