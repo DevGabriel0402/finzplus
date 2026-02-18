@@ -26,7 +26,7 @@ export default function LinhaGastosPorDia({ dados }) {
             dataKey="valor"
             name="Gastos"
             strokeWidth={2}
-            stroke="#000000"
+            stroke="currentColor"
           />
         </LineChart>
       </ResponsiveContainer>
