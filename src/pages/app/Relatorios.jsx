@@ -256,7 +256,7 @@ export default function Relatorios() {
                             opacity: gerandoPDF ? 0.7 : 1
                         }}
                     >
-                        {gerandoPDF ? 'Gerando...' : <><FiFileText /> Visualizar e Imprimir</>}
+                        {gerandoPDF ? 'Gerando...' : <><FiFileText />Imprimir</>}
                     </button>
                 </div>
             </Linha>

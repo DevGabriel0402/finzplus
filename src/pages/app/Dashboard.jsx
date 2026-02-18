@@ -6,7 +6,6 @@ import { listarLancamentosPorMes } from "../../services/lancamentos";
 import { hojeISO, mesRefDeDataISO } from "../../utils/datas";
 import { formatarDinheiro } from "../../utils/dinheiro";
 import { Card, Grid2, Linha } from "../../ui/Base";
-import { Botao } from "../../ui/Botao";
 import BarrasEntradasPorOrigem from "../../charts/BarrasEntradasPorOrigem";
 import PizzaEntradasVsSaidas from "../../charts/PizzaEntradasVsSaidas";
 import LinhaGastosPorDia from "../../charts/LinhaGastosPorDia";
@@ -161,10 +160,6 @@ export default function Dashboard() {
             onChange={(e) => setMesRef(e.target.value)}
             style={{ width: 200, paddingRight: 24 }}
           />
-
-          <Botao type="button" onClick={baixarPDF} disabled={gerandoPDF || carregando}>
-            {gerandoPDF ? "Gerando PDF..." : "Baixar PDF"}
-          </Botao>
         </div>
       </Linha>
 
