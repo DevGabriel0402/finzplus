@@ -99,7 +99,7 @@ export default function ItemLancamento({ item, onTogglePago, onExcluir, onEditar
           <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: 'wrap' }}>
             <b style={{
               fontSize: '1rem',
-              color: '#1f2937',
+              color: 'currentColor',
             }}>
               {item.descricao}
             </b>

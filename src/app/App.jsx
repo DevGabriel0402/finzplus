@@ -29,7 +29,7 @@ function AppConteudo() {
   const [tempoMinimoOk, setTempoMinimoOk] = useState(false);
 
   useEffect(() => {
-    const t = setTimeout(() => setTempoMinimoOk(true), 4200);
+    const t = setTimeout(() => setTempoMinimoOk(true), 2000);
     return () => clearTimeout(t);
   }, []);
 
