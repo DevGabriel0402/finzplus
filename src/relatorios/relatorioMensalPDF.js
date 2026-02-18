@@ -365,14 +365,27 @@ export async function gerarRelatorioMensalPDF({
   doc.text("Relatório gerado automaticamente por FinsPlus", pW - 10, pH - 10, { align: 'right' });
 
 
-  // --- Página 2: Tabela Detalhada ---
-  doc.addPage();
+  // --- Tabela Detalhada (Continuous Flow) ---
+  // Calcular Y atual
+  // Se houver espaço suficiente (> 40mm), iniciar na mesma página
+  // Caso contrário, nova página
+  const spaceLeft = pH - y - 20; // 20mm margem bottom
+  if (spaceLeft < 40) {
+    doc.addPage();
+    y = 20;
+  } else {
+    y += 10;
+  }
+
+  // Header da Seção
   doc.setFillColor(...C_PRIMARY);
-  doc.rect(0, 0, pW, 20, "F");
+  doc.rect(0, y, pW, 10, "F");
   doc.setTextColor(255, 255, 255);
-  doc.setFontSize(14);
+  doc.setFontSize(12);
   doc.setFont("helvetica", "bold");
-  doc.text("Detalhamento de Transações", 10, 13);
+  doc.text("Detalhamento de Transações", 10, y + 7);
+
+  y += 15; // Espaço após header
 
   const listaOrdenada = [...lancamentos].sort((a, b) => a.data.localeCompare(b.data));
   const body = listaOrdenada.map((l) => [
@@ -386,7 +399,7 @@ export async function gerarRelatorioMensalPDF({
   ]);
 
   autoTable(doc, {
-    startY: 25,
+    startY: y,
     theme: "striped",
     styles: { font: "helvetica", fontSize: 9, cellPadding: 3 },
     headStyles: { fillColor: C_DARK },
@@ -401,6 +414,13 @@ export async function gerarRelatorioMensalPDF({
         const rawVal = listaOrdenada[data.row.index].valor;
         const tipo = listaOrdenada[data.row.index].tipo;
         data.cell.styles.textColor = tipo === 'saida' ? C_RED : C_PRIMARY;
+      }
+    },
+    // Adicionar rodapé em cada página nova gerada pelo autoTable
+    didDrawPage: (data) => {
+      // Apenas para páginas subsequentes geradas pela tabela
+      if (data.pageNumber > 1) {
+        // Opcional: Adicionar cabeçalho simples ou numeração
       }
     }
   });
