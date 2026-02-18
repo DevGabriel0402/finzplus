@@ -30,6 +30,8 @@ export default function LancamentosUI({
   onSalvarEdicao,
   onCancelarEdicao,
 }) {
+  console.log("RENDER LancamentosUI | qtdAba:", qtdAba, "| totalAba:", totalAba, "| lista length:", lista?.length);
+
   let tituloAba = "";
   if (aba === "pendente") tituloAba = "Pendente";
   else if (aba === "pago") tituloAba = "Pagos";

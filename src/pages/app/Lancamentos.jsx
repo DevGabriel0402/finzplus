@@ -91,6 +91,13 @@ export default function Lancamentos() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [usuario?.uid, mesRef, aba]);
 
+  // ... inside Lancamentos component
+  console.log("RENDER Lancamentos | Lista length:", lista.length, "| Carregando:", carregando);
+
+  useEffect(() => {
+    console.log("EFFECT: lista updated:", lista);
+  }, [lista]);
+
   const totalAba = useMemo(
     () => lista.reduce((acc, l) => acc + (l.valor || 0), 0),
     [lista],
