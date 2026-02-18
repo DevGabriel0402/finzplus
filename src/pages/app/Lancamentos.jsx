@@ -50,7 +50,10 @@ export default function Lancamentos() {
   }
 
   async function carregar() {
-    if (!usuario?.uid) return;
+    if (!usuario?.uid) {
+      console.log("UserID indefined or null", usuario);
+      return;
+    }
     setCarregando(true);
 
     try {
@@ -67,7 +70,13 @@ export default function Lancamentos() {
         tipoFiltro = "entrada"; // Entradas (independente do status, geralmente 'pago' ou 'pendente')
       }
 
+      console.log("UseID: ", usuario.uid);
+      console.log("Mes Ref: ", mesRef);
+      console.log("Status Filtro: ", statusFiltro);
+      console.log("Tipo Filtro: ", tipoFiltro);
+
       const dados = await listarLancamentosSemIndice(usuario.uid, mesRef, statusFiltro, tipoFiltro);
+      console.log("Dados retornados: ", dados);
       setLista(dados);
     } catch (e) {
       console.log("ERRO AO CARREGAR LANÇAMENTOS:", e?.code, e?.message, e);

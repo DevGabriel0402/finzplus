@@ -73,9 +73,12 @@ export async function listarLancamentosSemIndice(uid, mesRef, status = null, tip
   if (status) filtros.push(where("status", "==", status));
   if (tipo) filtros.push(where("tipo", "==", tipo));
 
+  console.log("Consultando Firestore com filtros:", { uid, mesRef, status, tipo });
+
   const q = query(colLancamentos(uid), ...filtros);
 
   const snap = await getDocs(q);
+  console.log("Documentos encontrados:", snap.size);
   const lista = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 
   // ordena por data desc no front (ISO YYYY-MM-DD ordena perfeito)
