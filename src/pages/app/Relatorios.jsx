@@ -61,14 +61,53 @@ const ExemplosTexto = styled.div`
   font-style: italic;
 `;
 
+// Imports updated
+import { gerarRelatorioMensalPDF } from "../../relatorios/relatorioMensalPDF";
+import { FiDownload, FiFileText, FiX, FiPrinter } from "react-icons/fi";
+
+const ModalOverlay = styled.div`
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+  padding: 16px;
+`;
+
+const ModalContent = styled.div`
+  background: white;
+  width: 100%;
+  max-width: 800px;
+  height: 90vh;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+`;
+
+const ModalHeader = styled.div`
+  padding: 16px;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f9fafb;
+`;
+
 export default function Relatorios() {
     const { usuario } = useAuth();
-
     const [mesRef, setMesRef] = useState(mesRefDeDataISO(hojeISO()));
     const [lancamentos, setLancamentos] = useState([]);
     const [carregando, setCarregando] = useState(true);
 
-    // Load data same as Dashboard
+    // Preview States
+    const [modalAberto, setModalAberto] = useState(false);
+    const [pdfUrl, setPdfUrl] = useState(null);
+    const [gerandoPDF, setGerandoPDF] = useState(false);
+
+    // Load data
     useEffect(() => {
         async function carregar() {
             if (!usuario?.uid) return;
@@ -85,25 +124,9 @@ export default function Relatorios() {
         carregar();
     }, [usuario?.uid, mesRef]);
 
-    // Process data: Filter Expenses -> Group by Category -> Sort Desc
+    // Process data for UI (Charts/Lists)
     const relatorioGastos = useMemo(() => {
-        // 1. Filter only expenses (saida) AND paid (pago) within the current month (Cash Basis)
-        const saidas = lancamentos.filter(l => {
-            // Must be an expense
-            if (l.tipo !== "saida") return false;
-
-            // Must be paid
-            if (l.status !== "pago") return false;
-
-            // Must have been paid in the selected month (Regime de Caixa)
-            // If pagoEm is missing, we skip it to be safe, or assume data (due date)? 
-            // User asked for "only what was paid", implying strict cash basis.
-            if (!l.pagoEm || !l.pagoEm.startsWith(mesRef)) return false;
-
-            return true;
-        });
-
-        // 2. Group by category
+        const saidas = lancamentos.filter(l => l.tipo === "saida" && l.status === "pago");
         const mapa = new Map();
         let totalGeral = 0;
 
@@ -112,69 +135,139 @@ export default function Relatorios() {
             const val = Number(item.valor || 0);
             const desc = item.descricao || "Sem descrição";
 
-            if (!mapa.has(cat)) {
-                mapa.set(cat, { valor: 0, itens: [] });
-            }
+            if (!mapa.has(cat)) mapa.set(cat, { valor: 0, itens: [] });
             const entry = mapa.get(cat);
             entry.valor += val;
             entry.itens.push({ desc, val });
             totalGeral += val;
         });
 
-        // 3. Convert to array and sort
         const lista = Array.from(mapa.entries()).map(([categoria, dados]) => {
-            // Sort items by value desc to pick the most relevant examples
             dados.itens.sort((a, b) => b.val - a.val);
-
-            // Unique descriptions (up to 3)
-            const uniqueExamples = new Set();
-            const examplesList = [];
-
-            for (const item of dados.itens) {
-                if (!uniqueExamples.has(item.desc)) {
-                    uniqueExamples.add(item.desc);
-                    examplesList.push(item.desc);
-                }
-                if (examplesList.length >= 3) break;
-            }
-
+            const uniqueExamples = [...new Set(dados.itens.map(i => i.desc))].slice(0, 3);
             return {
                 categoria,
                 valor: dados.valor,
-                exemplosStr: examplesList.join(", "),
+                exemplosStr: uniqueExamples.join(", "),
                 porcentagem: totalGeral > 0 ? (dados.valor / totalGeral) * 100 : 0
             };
         });
 
-        // Sort categories: Biggest expenses first
         lista.sort((a, b) => b.valor - a.valor);
-
         return { lista, totalGeral };
-    }, [lancamentos, mesRef]);
+    }, [lancamentos]);
+
+    // Handlers
+    async function onGerarRelatorio(preview = true) {
+        if (!lancamentos.length) return toast.error("Sem dados para gerar relatório.");
+        setGerandoPDF(true);
+        try {
+            if (preview) {
+                const url = await gerarRelatorioMensalPDF({
+                    mesRef,
+                    lancamentos,
+                    preview: true
+                });
+                setPdfUrl(url);
+                setModalAberto(true);
+            } else {
+                await gerarRelatorioMensalPDF({
+                    mesRef,
+                    lancamentos,
+                    preview: false
+                });
+                toast.success("PDF baixado com sucesso!");
+            }
+        } catch (e) {
+            console.error(e);
+            toast.error("Erro ao gerar PDF.");
+        } finally {
+            setGerandoPDF(false);
+        }
+    }
+
+    function fecharModal() {
+        setModalAberto(false);
+        if (pdfUrl) URL.revokeObjectURL(pdfUrl);
+        setPdfUrl(null);
+    }
 
     return (
         <div style={{ display: "grid", gap: 16 }}>
+            {modalAberto && (
+                <ModalOverlay onClick={fecharModal}>
+                    <ModalContent onClick={e => e.stopPropagation()}>
+                        <ModalHeader>
+                            <h3 style={{ margin: 0 }}>Visualizar Relatório</h3>
+                            <button onClick={fecharModal} style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 20 }}>
+                                <FiX />
+                            </button>
+                        </ModalHeader>
+                        <div style={{ flex: 1, background: '#e5e7eb', padding: 0 }}>
+                            {pdfUrl && (
+                                <iframe
+                                    id="pdf-iframe"
+                                    src={pdfUrl}
+                                    style={{ width: '100%', height: '100%', border: 'none' }}
+                                    title="PDF Preview"
+                                />
+                            )}
+                        </div>
+                        <div style={{ padding: 16, borderTop: '1px solid #e5e7eb', display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
+                            <button
+                                onClick={fecharModal}
+                                style={{ padding: '8px 16px', borderRadius: 6, border: '1px solid #d1d5db', background: 'white', cursor: 'pointer' }}
+                            >
+                                Fechar
+                            </button>
+                            <button
+                                onClick={() => {
+                                    const iframe = document.getElementById('pdf-iframe');
+                                    if (iframe) {
+                                        iframe.contentWindow.focus();
+                                        iframe.contentWindow.print();
+                                    }
+                                }}
+                                style={{ padding: '8px 16px', borderRadius: 6, border: 'none', background: '#2563eb', color: 'white', display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}
+                            >
+                                <FiPrinter /> Imprimir
+                            </button>
+                        </div>
+                    </ModalContent>
+                </ModalOverlay>
+            )}
+
             <Linha>
-                <h3>Relatório de Gastos</h3>
+                <h3>Relatórios</h3>
                 <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                    <Label style={{ margin: 0 }}>Mês</Label>
                     <CampoData
                         type="month"
                         value={mesRef}
                         onChange={(e) => setMesRef(e.target.value)}
-                        style={{ paddingRight: 24 }}
                     />
+                    <button
+                        onClick={() => onGerarRelatorio(true)}
+                        disabled={gerandoPDF}
+                        style={{
+                            display: 'flex', alignItems: 'center', gap: 6,
+                            padding: '10px 20px', background: '#3b82f6', color: 'white',
+                            border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600,
+                            boxShadow: '0 2px 4px rgba(59, 130, 246, 0.3)',
+                            opacity: gerandoPDF ? 0.7 : 1
+                        }}
+                    >
+                        {gerandoPDF ? 'Gerando...' : <><FiFileText /> Visualizar e Imprimir</>}
+                    </button>
                 </div>
             </Linha>
 
             <Grid2>
                 <Card style={{ gridColumn: "1 / -1" }}>
                     <h4 style={{ marginBottom: "1rem" }}>Onde você mais gasta?</h4>
-
                     {carregando ? (
                         <p>Carregando...</p>
                     ) : relatorioGastos.lista.length === 0 ? (
-                        <p style={{ color: "#9ca3af" }}>Nenhuma despesa registrada neste mês.</p>
+                        <p style={{ color: "#9ca3af" }}>Nenhuma despesa paga registrada neste mês.</p>
                     ) : (
                         <ListaRelatorio>
                             {relatorioGastos.lista.map((item, index) => (
@@ -183,13 +276,9 @@ export default function Relatorios() {
                                         <span>{index + 1}. {item.categoria}</span>
                                         <ValorDestacado>{formatarDinheiro(item.valor)}</ValorDestacado>
                                     </InfoRow>
-
                                     {item.exemplosStr && (
-                                        <ExemplosTexto>
-                                            Ex: {item.exemplosStr}
-                                        </ExemplosTexto>
+                                        <ExemplosTexto>Ex: {item.exemplosStr}</ExemplosTexto>
                                     )}
-
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.8rem', color: '#6b7280' }}>
                                         <BarraProgressoBG>
                                             <BarraProgressoFill width={`${item.porcentagem}%`} />
@@ -203,7 +292,7 @@ export default function Relatorios() {
 
                     {!carregando && relatorioGastos.lista.length > 0 && (
                         <div style={{ marginTop: '1.5rem', textAlign: 'right', borderTop: '1px solid #f3f4f6', paddingTop: '1rem' }}>
-                            <span style={{ marginRight: 8, color: '#6b7280' }}>Total de Saídas:</span>
+                            <span style={{ marginRight: 8, color: '#6b7280' }}>Total de Saídas Pagas:</span>
                             <strong style={{ fontSize: '1.1rem', color: '#111827' }}>
                                 {formatarDinheiro(relatorioGastos.totalGeral)}
                             </strong>

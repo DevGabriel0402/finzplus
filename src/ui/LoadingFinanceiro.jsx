@@ -8,10 +8,6 @@ const pulse = keyframes`
   100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
 `;
 
-const shimmer = keyframes`
-  0% { left: -100%; }
-  100% { left: 100%; }
-`;
 
 const Container = styled.div`
   position: fixed;
@@ -24,8 +20,8 @@ const Container = styled.div`
   transition: opacity 0.6s ease-in-out, visibility 0.6s ease-in-out;
   
   ${({ $visivel }) =>
-        !$visivel &&
-        css`
+    !$visivel &&
+    css`
       opacity: 0;
       visibility: hidden;
       pointer-events: none;
@@ -52,47 +48,15 @@ const LogoBox = styled.div`
   box-shadow: 0 10px 30px -10px ${({ theme }) => theme.cores?.primaria || "#10B981"};
 `;
 
-const Title = styled.h1`
-  font-size: 18px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.cores?.texto || "#fff"};
-  letter-spacing: 0.5px;
-  opacity: 0.9;
-  margin: 0;
-`;
-
-const BarContainer = styled.div`
-  width: 160px;
-  height: 4px;
-  background: ${({ theme }) => theme.cores?.borda || "rgba(255,255,255,0.1)"};
-  border-radius: 4px;
-  overflow: hidden;
-  position: relative;
-`;
-
-const BarFill = styled.div`
-  position: absolute;
-  top: 0;
-  left: 0;
-  bottom: 0;
-  width: 40%;
-  background: ${({ theme }) => theme.cores?.primaria || "#10B981"};
-  border-radius: 4px;
-  animation: ${shimmer} 1.5s infinite linear;
-`;
 
 export default function LoadingFinanceiro({ visivel = true }) {
-    return (
-        <Container $visivel={visivel}>
-            <Content>
-                <LogoBox>
-                    <FiDollarSign />
-                </LogoBox>
-                <Title>Gestão de Dívidas</Title>
-                <BarContainer>
-                    <BarFill />
-                </BarContainer>
-            </Content>
-        </Container>
-    );
+  return (
+    <Container $visivel={visivel}>
+      <Content>
+        <LogoBox>
+          <FiDollarSign />
+        </LogoBox>
+      </Content>
+    </Container>
+  );
 }
