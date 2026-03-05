@@ -1,8 +1,9 @@
 import React, { useMemo } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
-import { FiHome, FiList, FiMoon, FiSun, FiSettings, FiLogOut, FiPieChart } from "react-icons/fi";
+import { FiHome, FiList, FiMoon, FiSun, FiSettings, FiLogOut, FiPieChart, FiUsers } from "react-icons/fi";
 import { useTema } from "../hooks/useTema";
 import { useConfig } from "../hooks/useConfig";
+import { useAuth } from "../hooks/useAuth";
 import { obterIcone } from "../data/iconesPainel";
 import { sair } from "../services/auth";
 
@@ -25,23 +26,23 @@ import {
   Tab,
 } from "../ui/LayoutShell";
 
-function obterTituloDaRota(rota) {
-  if (rota === "/") return "Dashboard";
-  if (rota.startsWith("/lancamentos")) return "Lançamentos";
-  if (rota.startsWith("/relatorios")) return "Relatórios";
-  if (rota.startsWith("/configuracoes")) return "Configurações";
-  return "Painel";
-}
-
 export default function LayoutApp() {
   const nav = useNavigate();
   const loc = useLocation();
   const { modo, alternarTema } = useTema();
   const { config } = useConfig();
+  const { perfil } = useAuth();
 
   const rota = loc.pathname;
 
-  const tituloTop = useMemo(() => obterTituloDaRota(rota), [rota]);
+  const tituloTop = useMemo(() => {
+    if (rota === "/") return "Dashboard";
+    if (rota.startsWith("/lancamentos")) return "Lançamentos";
+    if (rota.startsWith("/relatorios")) return "Relatórios";
+    if (rota.startsWith("/configuracoes")) return "Configurações";
+    if (rota.startsWith("/admin/usuarios")) return "Usuários";
+    return "Painel";
+  }, [rota]);
 
   function ir(path) {
     nav(path);
@@ -106,6 +107,16 @@ export default function LayoutApp() {
           >
             <FiSettings /> Configurações
           </ItemMenu>
+
+          {perfil?.role === "admin" && (
+            <ItemMenu
+              $ativo={rota.startsWith("/admin/usuarios")}
+              onClick={() => ir("/admin/usuarios")}
+              style={{ marginTop: 'auto', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '1rem' }}
+            >
+              <FiUsers /> Admin
+            </ItemMenu>
+          )}
         </Menu>
       </Sidebar>
 
@@ -172,8 +183,6 @@ export default function LayoutApp() {
             >
               <FiPieChart /> Relatórios
             </Tab>
-
-
           </Tabs>
         </Tabbar>
       </Conteudo>

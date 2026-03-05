@@ -21,6 +21,8 @@ export async function criarEstruturaInicial(uid, email) {
         doc(db, "usuarios", uid),
         {
             email: email || "",
+            role: "user",
+            ativo: true,
             atualizadoEm: serverTimestamp(),
             criadoEm: serverTimestamp(),
         },
