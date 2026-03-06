@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import styled from "styled-components";
-import { formatarMoedaBRLInput, parseMoedaBRL } from "../../../utils/dinheiro";
+import { formatarMoedaBRLInput, parseMoedaBRL, formatarDinheiro } from "../../../utils/dinheiro";
 import { Botao } from "../../../ui/Botao";
 import { Card } from "../../../ui/Base";
 import { Campo, Label } from "../../../ui/Campo";
@@ -47,7 +47,7 @@ const GridSelects = styled.div`
 export default function ModalEditarLancamento({ item, onSalvar, onFechar }) {
     const [tipo, setTipo] = useState(item?.tipo || "saida");
     const [descricao, setDescricao] = useState(item?.descricao || "");
-    const [valor, setValor] = useState(formatarMoedaBRLInput(String(item?.valor || 0)));
+    const [valor, setValor] = useState(formatarDinheiro(item?.valor || 0));
     const [data, setData] = useState(item?.data || "");
     const [categoria, setCategoria] = useState(item?.categoria || "");
     const [origemDestino, setOrigemDestino] = useState(item?.origemDestino || "");

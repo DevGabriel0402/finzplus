@@ -365,16 +365,57 @@ export async function gerarRelatorioMensalPDF({
   doc.text("Relatório gerado automaticamente por FinsPlus", pW - 10, pH - 10, { align: 'right' });
 
 
-  // --- Tabela Detalhada (Continuous Flow) ---
-  // Calcular Y atual
-  // Se houver espaço suficiente (> 40mm), iniciar na mesma página
-  // Caso contrário, nova página
-  const spaceLeft = pH - y - 20; // 20mm margem bottom
-  if (spaceLeft < 40) {
+  // --- Tabela de Resumo por Categoria (Gastos e Percentual) ---
+  const spaceLeftCat = pH - y - 20;
+  if (spaceLeftCat < 40) {
     doc.addPage();
     y = 20;
   } else {
     y += 10;
+  }
+
+  doc.setFillColor(...C_PRIMARY);
+  doc.rect(0, y, pW, 10, "F");
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(12);
+  doc.setFont("helvetica", "bold");
+  doc.text("Resumo de Gastos por Categoria", 10, y + 7);
+
+  y += 15;
+
+  const todasCategoriasSaidas = Array.from(catMap.entries())
+    .map(([nome, valor]) => ({ nome, valor }))
+    .sort((a, b) => b.valor - a.valor);
+
+  const bodyCategorias = todasCategoriasSaidas.map((cat) => {
+    const pct = totalSaidas > 0 ? ((cat.valor / totalSaidas) * 100).toFixed(2) + "%" : "0.00%";
+    return [
+      cat.nome,
+      formatarDinheiro(cat.valor),
+      pct
+    ];
+  });
+
+  autoTable(doc, {
+    startY: y,
+    theme: "striped",
+    styles: { font: "helvetica", fontSize: 9, cellPadding: 3 },
+    headStyles: { fillColor: C_DARK },
+    head: [["Categoria de Gasto", "Valor Total", "Percentual sobre Total"]],
+    body: bodyCategorias,
+    columnStyles: {
+      1: { halign: 'right', fontStyle: 'bold', cellWidth: 40 },
+      2: { halign: 'right', cellWidth: 40 }
+    }
+  });
+
+  y = doc.lastAutoTable.finalY + 10;
+
+  // --- Tabela Detalhada (Continuous Flow) ---
+  const spaceLeftDet = pH - y - 20;
+  if (spaceLeftDet < 40) {
+    doc.addPage();
+    y = 20;
   }
 
   // Header da Seção
@@ -388,32 +429,44 @@ export async function gerarRelatorioMensalPDF({
   y += 15; // Espaço após header
 
   const listaOrdenada = [...lancamentos].sort((a, b) => a.data.localeCompare(b.data));
-  const body = listaOrdenada.map((l) => [
-    l.data.split("-").reverse().join("/"),
-    l.tipo === "entrada" ? "Entrada" : "Saída",
-    l.descricao,
-    l.categoria,
-    l.conta,
-    l.status === "pago" ? "Pago" : "Pendente",
-    formatarDinheiro(Number(l.valor)),
-  ]);
+  const body = listaOrdenada.map((l) => {
+    let pct = "-";
+    if (l.tipo === "saida" && totalSaidas > 0) {
+      pct = ((Number(l.valor) / totalSaidas) * 100).toFixed(2) + "%";
+    }
+    return [
+      l.data.split("-").reverse().join("/"),
+      l.tipo === "entrada" ? "Entrada" : "Saída",
+      l.descricao,
+      l.categoria,
+      l.conta,
+      l.status === "pago" ? "Pago" : "Pendente",
+      formatarDinheiro(Number(l.valor)),
+      pct
+    ];
+  });
 
   autoTable(doc, {
     startY: y,
     theme: "striped",
     styles: { font: "helvetica", fontSize: 9, cellPadding: 3 },
     headStyles: { fillColor: C_DARK },
-    head: [["Data", "Tipo", "Descrição", "Categoria", "Conta", "Status", "Valor"]],
+    head: [["Data", "Tipo", "Descrição", "Categoria", "Conta", "Status", "Valor", "% Total"]],
     body: body,
     columnStyles: {
       1: { cellWidth: 20 },
-      6: { halign: 'right', fontStyle: 'bold' }
+      6: { halign: 'right', fontStyle: 'bold' },
+      7: { halign: 'right' }
     },
     didParseCell: (data) => {
-      if (data.section === 'body' && data.column.index === 6) {
-        const rawVal = listaOrdenada[data.row.index].valor;
-        const tipo = listaOrdenada[data.row.index].tipo;
-        data.cell.styles.textColor = tipo === 'saida' ? C_RED : C_PRIMARY;
+      if (data.section === 'body') {
+        if (data.column.index === 6) {
+          const tipo = listaOrdenada[data.row.index].tipo;
+          data.cell.styles.textColor = tipo === 'saida' ? C_RED : C_PRIMARY;
+        }
+        if (data.column.index === 7) {
+          data.cell.styles.textColor = [107, 114, 128]; // gray
+        }
       }
     },
     // Adicionar rodapé em cada página nova gerada pelo autoTable
