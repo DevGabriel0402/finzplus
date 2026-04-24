@@ -112,6 +112,16 @@ export default function ItemLancamento({ item, onTogglePago, onExcluir, onEditar
             <Chip>{item.categoria}</Chip>
             <Chip>{item.origemDestino}</Chip>
             <Chip>{item.conta}</Chip>
+            {item.recorrente && (
+              <Chip style={{ borderColor: '#8b5cf6', color: '#8b5cf6', background: 'rgba(139, 92, 246, 0.05)' }}>
+                Fixo
+              </Chip>
+            )}
+            {item.parcelado && (
+              <Chip style={{ borderColor: '#3b82f6', color: '#3b82f6', background: 'rgba(59, 130, 246, 0.05)' }}>
+                Parcelado
+              </Chip>
+            )}
             {pago && <Chip style={{ borderColor: '#16a34a', color: '#16a34a' }}>Pago</Chip>}
           </div>
         </div>

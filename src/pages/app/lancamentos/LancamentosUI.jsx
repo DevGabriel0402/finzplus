@@ -86,6 +86,10 @@ export default function LancamentosUI({
         setOrigemDestino={form.setOrigemDestino}
         conta={form.conta}
         setConta={form.setConta}
+        isRecorrente={form.isRecorrente}
+        setIsRecorrente={form.setIsRecorrente}
+        parcelas={form.parcelas}
+        setParcelas={form.setParcelas}
         onCriar={onCriar}
       />
 

@@ -9,6 +9,7 @@ import {
   updateDoc,
   where,
   serverTimestamp,
+  writeBatch,
 } from "firebase/firestore";
 import { db } from "./firebase";
 import { hojeISO, mesRefDeDataISO } from "../utils/datas";
@@ -44,6 +45,39 @@ export async function criarLancamento(uid, dados) {
     criadoEm: serverTimestamp(),
     atualizadoEm: serverTimestamp(),
   });
+}
+
+/**
+ * Cria múltiplos lançamentos (recorrência ou parcelamento)
+ */
+export async function criarLancamentosEmLote(uid, listaDados) {
+  const batch = writeBatch(db);
+  const colRef = colLancamentos(uid);
+
+  listaDados.forEach((dados) => {
+    const dataVenc = dados.data || hojeISO();
+    const mesRef = dados.mesRef || mesRefDeDataISO(dataVenc);
+    const docRef = doc(colRef); // gera um novo ID
+
+    batch.set(docRef, {
+      ...dados,
+      tipo: dados.tipo,
+      descricao: String(dados.descricao || "").trim(),
+      valor: Number(dados.valor),
+      data: dataVenc,
+      mesRef,
+      categoria: String(dados.categoria || "").trim(),
+      origemDestino: String(dados.origemDestino || "").trim(),
+      conta: String(dados.conta || "").trim(),
+      status: "pendente",
+      pagoEm: null,
+      mesPagamento: null,
+      criadoEm: serverTimestamp(),
+      atualizadoEm: serverTimestamp(),
+    });
+  });
+
+  await batch.commit();
 }
 
 /**

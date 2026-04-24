@@ -65,6 +65,10 @@ export default function FormNovoLancamento({
   setOrigemDestino,
   conta,
   setConta,
+  isRecorrente,
+  setIsRecorrente,
+  parcelas,
+  setParcelas,
   onCriar,
 }) {
   // =========================
@@ -299,6 +303,50 @@ export default function FormNovoLancamento({
             />
           </div>
         </GridSelects>
+
+        {tipo === "saida" && (
+          <div
+            style={{
+              display: "grid",
+              gap: 12,
+              gridTemplateColumns: "1fr 1fr",
+              padding: "12px",
+              background: "rgba(255, 255, 255, 0.03)",
+              borderRadius: "8px",
+              border: "1px solid rgba(255, 255, 255, 0.1)",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <input
+                type="checkbox"
+                id="recorrente"
+                checked={isRecorrente}
+                onChange={(e) => {
+                  setIsRecorrente(e.target.checked);
+                  if (e.target.checked) setParcelas(1);
+                }}
+                style={{ width: 20, height: 20, cursor: "pointer" }}
+              />
+              <Label htmlFor="recorrente" style={{ margin: 0, cursor: "pointer" }}>
+                Fixo todo mês
+              </Label>
+            </div>
+
+            {!isRecorrente && (
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <Label style={{ margin: 0 }}>Parcelas:</Label>
+                <Campo
+                  type="number"
+                  min="1"
+                  max="100"
+                  value={parcelas}
+                  onChange={(e) => setParcelas(Math.max(1, parseInt(e.target.value) || 1))}
+                  style={{ width: 80 }}
+                />
+              </div>
+            )}
+          </div>
+        )}
 
         <Botao>Criar</Botao>
       </form>

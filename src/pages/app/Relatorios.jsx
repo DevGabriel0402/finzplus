@@ -126,7 +126,7 @@ export default function Relatorios() {
 
     // Process data for UI (Charts/Lists)
     const relatorioGastos = useMemo(() => {
-        const saidas = lancamentos.filter(l => l.tipo === "saida" && l.status === "pago");
+        const saidas = lancamentos.filter(l => l.tipo === "saida");
         const mapa = new Map();
         let totalGeral = 0;
 
@@ -267,7 +267,7 @@ export default function Relatorios() {
                     {carregando ? (
                         <p>Carregando...</p>
                     ) : relatorioGastos.lista.length === 0 ? (
-                        <p style={{ color: "#9ca3af" }}>Nenhuma despesa paga registrada neste mês.</p>
+                        <p style={{ color: "#9ca3af" }}>Nenhuma despesa registrada neste mês.</p>
                     ) : (
                         <ListaRelatorio>
                             {relatorioGastos.lista.map((item, index) => (
@@ -292,7 +292,7 @@ export default function Relatorios() {
 
                     {!carregando && relatorioGastos.lista.length > 0 && (
                         <div style={{ marginTop: '1.5rem', textAlign: 'right', borderTop: '1px solid #f3f4f6', paddingTop: '1rem' }}>
-                            <span style={{ marginRight: 8, color: '#6b7280' }}>Total de Saídas Pagas:</span>
+                            <span style={{ marginRight: 8, color: '#6b7280' }}>Total de Saídas:</span>
                             <strong style={{ fontSize: '1.1rem', color: '#111827' }}>
                                 {formatarDinheiro(relatorioGastos.totalGeral)}
                             </strong>

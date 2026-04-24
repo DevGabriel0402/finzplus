@@ -9,9 +9,10 @@ import {
   marcarComoPago,
   marcarComoPendente,
   atualizarLancamento,
+  criarLancamentosEmLote,
 } from "../../services/lancamentos";
 
-import { hojeISO, mesRefDeDataISO } from "../../utils/datas";
+import { hojeISO, mesRefDeDataISO, adicionarMeses } from "../../utils/datas";
 import { formatarMoedaBRLInput, parseMoedaBRL } from "../../utils/dinheiro";
 import LancamentosUI from "./lancamentos/LancamentosUI";
 
@@ -31,6 +32,8 @@ export default function Lancamentos() {
   const [categoria, setCategoria] = useState("Moradia");
   const [origemDestino, setOrigemDestino] = useState("Conta de Luz");
   const [conta, setConta] = useState("Pix");
+  const [isRecorrente, setIsRecorrente] = useState(false);
+  const [parcelas, setParcelas] = useState(1);
 
   // ✅ Estado de edição
   const [itemEmEdicao, setItemEmEdicao] = useState(null);
@@ -123,24 +126,57 @@ export default function Lancamentos() {
     const dataFinal = data || hojeISO();
     const mesRefFinal = mesRefDeDataISO(dataFinal);
 
-
-
     try {
-      await criarLancamento(usuario.uid, {
-        tipo,
-        descricao: desc,
-        valor: v,
-        data: dataFinal,
-        mesRef: mesRefFinal,
-        categoria: cat,
-        origemDestino: od,
-        conta: cta,
-      });
+      if (tipo === "saida" && (isRecorrente || parcelas > 1)) {
+        const listaParaCriar = [];
+        const qtd = isRecorrente ? 12 : parcelas;
 
-      toast.success("Lançamento criado (pendente).", { id: "ok-criar" });
+        for (let i = 0; i < qtd; i++) {
+          const dataParcela = adicionarMeses(dataFinal, i);
+          const mesRefParcela = mesRefDeDataISO(dataParcela);
+          
+          let descFinal = desc;
+          if (parcelas > 1) {
+            descFinal = `${desc} (${i + 1}/${parcelas})`;
+          }
+
+          listaParaCriar.push({
+            tipo,
+            descricao: descFinal,
+            valor: v,
+            data: dataParcela,
+            mesRef: mesRefParcela,
+            categoria: cat,
+            origemDestino: od,
+            conta: cta,
+            // Metadados para badges
+            recorrente: isRecorrente,
+            parcelado: parcelas > 1,
+            parcelaAtual: i + 1,
+            totalParcelas: parcelas,
+          });
+        }
+
+        await criarLancamentosEmLote(usuario.uid, listaParaCriar);
+        toast.success(isRecorrente ? "Itens recorrentes criados (12 meses)." : `${parcelas} parcelas criadas.`);
+      } else {
+        await criarLancamento(usuario.uid, {
+          tipo,
+          descricao: desc,
+          valor: v,
+          data: dataFinal,
+          mesRef: mesRefFinal,
+          categoria: cat,
+          origemDestino: od,
+          conta: cta,
+        });
+        toast.success("Lançamento criado (pendente).", { id: "ok-criar" });
+      }
 
       setDescricao("");
       setValor(formatarMoedaBRLInput(""));
+      setIsRecorrente(false);
+      setParcelas(1);
 
       // Mostra o item criado
       if (mesRef !== mesRefFinal) setMesRef(mesRefFinal);
@@ -222,6 +258,10 @@ export default function Lancamentos() {
         setOrigemDestino,
         conta,
         setConta,
+        isRecorrente,
+        setIsRecorrente,
+        parcelas,
+        setParcelas,
       }}
       onCriar={onCriar}
       carregando={carregando}
