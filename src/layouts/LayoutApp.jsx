@@ -1,6 +1,6 @@
 import React, { useMemo } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
-import { FiHome, FiList, FiMoon, FiSun, FiSettings, FiLogOut, FiPieChart, FiUsers } from "react-icons/fi";
+import { FiHome, FiList, FiMoon, FiSun, FiSettings, FiLogOut, FiPieChart, FiUsers, FiTrendingUp, FiTarget } from "react-icons/fi";
 import { useTema } from "../hooks/useTema";
 import { useConfig } from "../hooks/useConfig";
 import { useAuth } from "../hooks/useAuth";
@@ -40,6 +40,8 @@ export default function LayoutApp() {
     if (rota.startsWith("/lancamentos")) return "Lançamentos";
     if (rota.startsWith("/relatorios")) return "Relatórios";
     if (rota.startsWith("/configuracoes")) return "Configurações";
+    if (rota.startsWith("/investimentos")) return "Investimentos";
+    if (rota.startsWith("/metas")) return "Metas";
     if (rota.startsWith("/admin/usuarios")) return "Usuários";
     return "Painel";
   }, [rota]);
@@ -99,6 +101,20 @@ export default function LayoutApp() {
             onClick={() => ir("/relatorios")}
           >
             <FiPieChart /> Relatórios
+          </ItemMenu>
+
+          <ItemMenu
+            $ativo={rota.startsWith("/investimentos")}
+            onClick={() => ir("/investimentos")}
+          >
+            <FiTrendingUp /> Investimentos
+          </ItemMenu>
+
+          <ItemMenu
+            $ativo={rota.startsWith("/metas")}
+            onClick={() => ir("/metas")}
+          >
+            <FiTarget /> Metas
           </ItemMenu>
 
           <ItemMenu
@@ -182,6 +198,20 @@ export default function LayoutApp() {
               onClick={() => ir("/relatorios")}
             >
               <FiPieChart /> Relatórios
+            </Tab>
+
+            <Tab
+              $ativo={rota.startsWith("/investimentos")}
+              onClick={() => ir("/investimentos")}
+            >
+              <FiTrendingUp /> Invest.
+            </Tab>
+
+            <Tab
+              $ativo={rota.startsWith("/metas")}
+              onClick={() => ir("/metas")}
+            >
+              <FiTarget /> Metas
             </Tab>
           </Tabs>
         </Tabbar>

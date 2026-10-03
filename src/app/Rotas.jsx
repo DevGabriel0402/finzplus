@@ -12,6 +12,8 @@ import Dashboard from "../pages/app/Dashboard";
 import Lancamentos from "../pages/app/Lancamentos";
 import Relatorios from "../pages/app/Relatorios";
 import GerenciarUsuarios from "../pages/app/GerenciarUsuarios";
+import Investimentos from "../pages/app/Investimentos";
+import Metas from "../pages/app/Metas";
 
 import Configuracoes from "../pages/app/Configuracoes";
 import LoadingFinanceiro from "../ui/LoadingFinanceiro";
@@ -95,6 +97,8 @@ export default function Rotas() {
         <Route path="/" element={<Dashboard />} />
         <Route path="/lancamentos" element={<Lancamentos />} />
         <Route path="/relatorios" element={<Relatorios />} />
+        <Route path="/investimentos" element={<Investimentos />} />
+        <Route path="/metas" element={<Metas />} />
         <Route path="/configuracoes" element={<Configuracoes />} />
 
         {/* Rotas Administrativas */}

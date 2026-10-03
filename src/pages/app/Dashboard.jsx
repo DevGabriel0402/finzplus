@@ -8,10 +8,11 @@ import { formatarDinheiro } from "../../utils/dinheiro";
 import { Card, Grid2, Linha } from "../../ui/Base";
 import BarrasEntradasPorOrigem from "../../charts/BarrasEntradasPorOrigem";
 import PizzaEntradasVsSaidas from "../../charts/PizzaEntradasVsSaidas";
-import LinhaGastosPorDia from "../../charts/LinhaGastosPorDia";
+import BarrasSaidasPorCategoria from "../../charts/BarrasSaidasPorCategoria";
 import { Label } from "../../ui/Campo";
 import { CampoData } from "../../ui/CampoData.jsx";
 import { gerarRelatorioMensalPDF } from "../../relatorios/relatorioMensalPDF";
+import { FiTrendingUp, FiTrendingDown, FiClock, FiDollarSign } from "react-icons/fi";
 
 function agruparSomar(lista, chave) {
   const mapa = new Map();
@@ -23,41 +24,7 @@ function agruparSomar(lista, chave) {
   return Array.from(mapa.entries()).map(([nome, valor]) => ({ nome, valor }));
 }
 
-function montarDiasDoMes(mesRef) {
-  const [anoStr, mesStr] = String(mesRef || "").split("-");
-  const ano = Number(anoStr);
-  const mes = Number(mesStr); // 1..12
-  if (!ano || !mes) return [];
-  const ultimoDia = new Date(ano, mes, 0).getDate();
-  const dias = [];
-  for (let d = 1; d <= ultimoDia; d++) dias.push(String(d).padStart(2, "0"));
-  return dias;
-}
 
-function agruparSaidasPorDia(saidas, mesRef) {
-  const dias = montarDiasDoMes(mesRef);
-  const mapa = new Map(dias.map((dia) => [dia, 0]));
-
-  for (const s of saidas) {
-    // Lógica para definir a 'data efetiva' do gasto no gráfico:
-    // Se não for pago, ignora (saldo real / caixa).
-    if (s.status !== "pago") continue;
-
-    let dataEfetiva = s.pagoEm;
-
-    if (!dataEfetiva || typeof dataEfetiva !== "string") continue;
-
-    // Opcional: só soma no gráfico se a data efetiva for dentro do mês atual do dashboard.
-    // Se o user pagou antecipado (mês anterior) ou atrasado (mês seguinte), 
-    // e estamos visualizando este mêsRef, teoricamente não apareceria neste dias[].
-    if (!dataEfetiva.startsWith(mesRef)) continue;
-
-    const dia = dataEfetiva.slice(8, 10);
-    mapa.set(dia, (mapa.get(dia) || 0) + (s.valor || 0));
-  }
-
-  return dias.map((dia) => ({ dia, valor: mapa.get(dia) || 0 }));
-}
 
 export default function Dashboard() {
   const { usuario } = useAuth();
@@ -67,6 +34,24 @@ export default function Dashboard() {
   const [lancamentos, setLancamentos] = useState([]);
   const [carregando, setCarregando] = useState(true);
   const [gerandoPDF, setGerandoPDF] = useState(false);
+  const [cotacoes, setCotacoes] = useState({ usd: null, eur: null });
+
+  // Fetch cotações de moedas
+  useEffect(() => {
+    async function fetchCotacoes() {
+      try {
+        const res = await fetch("https://economia.awesomeapi.com.br/last/USD-BRL,EUR-BRL");
+        const data = await res.json();
+        setCotacoes({
+          usd: parseFloat(data.USDBRL.bid),
+          eur: parseFloat(data.EURBRL.bid),
+        });
+      } catch (error) {
+        console.error("Erro ao buscar cotações:", error);
+      }
+    }
+    fetchCotacoes();
+  }, []);
 
   async function carregar() {
     if (!usuario?.uid) return;
@@ -127,7 +112,22 @@ export default function Dashboard() {
     return agruparSomar(entradasEfetivas, "origemDestino");
   }, [entradas, mesRef]);
 
-  const dadosLinhaGastosPorDia = useMemo(() => agruparSaidasPorDia(saidas, mesRef), [saidas, mesRef]);
+  const dadosBarrasSaidas = useMemo(() => {
+    const saidasEfetivas = saidas.filter((item) => {
+      // Para gastos previstos (pendentes) usamos item.data. Para pagos, usamos pagoEm.
+      const dataEfetiva = item.status === "pago" ? item.pagoEm : item.data;
+      return dataEfetiva && dataEfetiva.startsWith(mesRef);
+    });
+    return agruparSomar(saidasEfetivas, "origemDestino");
+  }, [saidas, mesRef]);
+
+  // Próximos Vencimentos
+  const proximosVencimentos = useMemo(() => {
+    return saidas
+      .filter((item) => item.status !== "pago")
+      .sort((a, b) => new Date(a.data) - new Date(b.data))
+      .slice(0, 5);
+  }, [saidas]);
 
   async function baixarPDF() {
     try {
@@ -163,27 +163,136 @@ export default function Dashboard() {
         </div>
       </Linha>
 
-      <Grid2>
-        <Card>
-          <div style={{ color: "#9ca3af" }}>Saldo</div>
-          <h2 style={{ margin: "6px 0 0" }}>
+      <Grid2 style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "16px" }}>
+        <Card style={{ borderTop: "4px solid #10b981", background: "linear-gradient(180deg, rgba(16,185,129,0.05) 0%, rgba(0,0,0,0) 100%)" }}>
+          <div style={{ color: "#9ca3af", display: "flex", justifyContent: "space-between" }}>
+            <span>Entradas</span>
+            <FiTrendingUp color="#10b981" />
+          </div>
+          <h2 style={{ margin: "6px 0 0", fontSize: "28px" }}>{formatarDinheiro(totalEntradas)}</h2>
+        </Card>
+
+        <Card style={{ borderTop: "4px solid #ef4444", background: "linear-gradient(180deg, rgba(239,68,68,0.05) 0%, rgba(0,0,0,0) 100%)" }}>
+          <div style={{ color: "#9ca3af", display: "flex", justifyContent: "space-between" }}>
+            <span>Saídas</span>
+            <FiTrendingDown color="#ef4444" />
+          </div>
+          <h2 style={{ margin: "6px 0 0", fontSize: "28px" }}>{formatarDinheiro(totalSaidas)}</h2>
+        </Card>
+
+        <Card style={{ borderTop: "4px solid #3b82f6", background: "linear-gradient(180deg, rgba(59,130,246,0.05) 0%, rgba(0,0,0,0) 100%)" }}>
+          <div style={{ color: "#9ca3af", display: "flex", justifyContent: "space-between" }}>
+            <span>Saldo Líquido</span>
+            <FiDollarSign color="#3b82f6" />
+          </div>
+          <h2 style={{ margin: "6px 0 0", fontSize: "28px", color: (totalEntradas - totalSaidas) >= 0 ? "inherit" : "#ef4444" }}>
             {formatarDinheiro(totalEntradas - totalSaidas)}
           </h2>
         </Card>
+      </Grid2>
 
-        <Card>
-          <div style={{ color: "#9ca3af" }}>Lançamentos</div>
-          <h2 style={{ margin: "6px 0 0" }}>{lancamentos.length}</h2>
+      <Grid2>
+        {/* Painel de Cotações & Ações */}
+        <Card style={{ padding: "16px 24px", background: "#111827", border: "1px solid #374151", display: "flex", flexDirection: "column" }}>
+          
+          {/* Câmbio */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: "16px", borderBottom: "1px solid #374151", marginBottom: "16px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <span style={{ fontSize: "24px" }}>🇺🇸</span>
+              <div>
+                <div style={{ fontSize: "12px", color: "#9ca3af" }}>Dólar Atual</div>
+                <strong style={{ fontSize: "16px", color: "white" }}>{cotacoes.usd ? `R$ ${cotacoes.usd.toFixed(2)}` : "..."}</strong>
+              </div>
+            </div>
+            <div style={{ width: "1px", height: "30px", background: "#374151" }}></div>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <span style={{ fontSize: "24px" }}>🇪🇺</span>
+              <div>
+                <div style={{ fontSize: "12px", color: "#9ca3af" }}>Euro Atual</div>
+                <strong style={{ fontSize: "16px", color: "white" }}>{cotacoes.eur ? `R$ ${cotacoes.eur.toFixed(2)}` : "..."}</strong>
+              </div>
+            </div>
+          </div>
+
+          {/* Melhores Ações (Mock Radar) */}
+          <div>
+            <div style={{ fontSize: "11px", color: "#9ca3af", textTransform: "uppercase", letterSpacing: "1px", marginBottom: "12px" }}>
+              📈 Radar de Ações (Top 3)
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <div style={{ width: "32px", height: "32px", borderRadius: "6px", background: "#1f2937", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", fontWeight: "bold", color: "white" }}>IT</div>
+                  <div>
+                    <strong style={{ fontSize: "13px", color: "white", display: "block" }}>ITUB4</strong>
+                    <span style={{ fontSize: "11px", color: "gray" }}>Itaú Unibanco</span>
+                  </div>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <strong style={{ fontSize: "13px", color: "white", display: "block" }}>R$ 34,50</strong>
+                  <span style={{ fontSize: "11px", color: "#10b981" }}>+1.2%</span>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <div style={{ width: "32px", height: "32px", borderRadius: "6px", background: "#1f2937", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", fontWeight: "bold", color: "white" }}>WE</div>
+                  <div>
+                    <strong style={{ fontSize: "13px", color: "white", display: "block" }}>WEGE3</strong>
+                    <span style={{ fontSize: "11px", color: "gray" }}>WEG S.A.</span>
+                  </div>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <strong style={{ fontSize: "13px", color: "white", display: "block" }}>R$ 38,90</strong>
+                  <span style={{ fontSize: "11px", color: "#10b981" }}>+0.8%</span>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <div style={{ width: "32px", height: "32px", borderRadius: "6px", background: "#1f2937", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", fontWeight: "bold", color: "white" }}>PE</div>
+                  <div>
+                    <strong style={{ fontSize: "13px", color: "white", display: "block" }}>PETR4</strong>
+                    <span style={{ fontSize: "11px", color: "gray" }}>Petrobras</span>
+                  </div>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <strong style={{ fontSize: "13px", color: "white", display: "block" }}>R$ 36,20</strong>
+                  <span style={{ fontSize: "11px", color: "#ef4444" }}>-0.4%</span>
+                </div>
+              </div>
+
+            </div>
+          </div>
         </Card>
-
-        <Card bg="rgba(22,163,74,0.12)">
-          <div style={{ color: "#9ca3af" }}>Entradas</div>
-          <h2 style={{ margin: "6px 0 0" }}>{formatarDinheiro(totalEntradas)}</h2>
-        </Card>
-
-        <Card bg="rgba(220,38,38,0.12)">
-          <div style={{ color: "#9ca3af" }}>Saídas</div>
-          <h2 style={{ margin: "6px 0 0" }}>{formatarDinheiro(totalSaidas)}</h2>
+        
+        {/* Painel Próximos Vencimentos */}
+        <Card style={{ borderLeft: "4px solid #f59e0b" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
+            <FiClock color="#f59e0b" />
+            <h4 style={{ margin: 0 }}>Próximos Vencimentos</h4>
+          </div>
+          {carregando ? (
+            <div style={{ color: "gray", fontSize: "14px" }}>Buscando vencimentos...</div>
+          ) : proximosVencimentos.length === 0 ? (
+            <div style={{ color: "gray", fontSize: "14px" }}>Nenhuma conta pendente! 🎉</div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+              {proximosVencimentos.map(v => {
+                const isAtrasado = new Date(v.data) < new Date(hojeISO());
+                return (
+                  <div key={v.id} style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", padding: "8px", background: "rgba(0,0,0,0.02)", borderRadius: "6px" }}>
+                    <div>
+                      <strong style={{ display: "block" }}>{v.origemDestino}</strong>
+                      <span style={{ color: isAtrasado ? "#ef4444" : "gray" }}>Vence: {v.data.split('-').reverse().join('/')}</span>
+                    </div>
+                    <strong style={{ color: "#ef4444" }}>{formatarDinheiro(v.valor)}</strong>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </Card>
       </Grid2>
 
@@ -211,13 +320,13 @@ export default function Dashboard() {
         </Card>
 
         <Card style={{ gridColumn: "1 / -1" }}>
-          <h4>Gastos por dia</h4>
+          <h4>Gastos por Categoria</h4>
           {carregando ? (
             <div>Carregando...</div>
-          ) : saidas.length === 0 ? (
+          ) : dadosBarrasSaidas.length === 0 ? (
             <div style={{ color: "#9ca3af" }}>Sem saídas no mês.</div>
           ) : (
-            <LinhaGastosPorDia dados={dadosLinhaGastosPorDia} />
+            <BarrasSaidasPorCategoria dados={dadosBarrasSaidas} />
           )}
         </Card>
       </Grid2>

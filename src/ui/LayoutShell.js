@@ -174,12 +174,24 @@ export const Tabbar = styled.footer`
 `;
 
 export const Tabs = styled.div`
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  display: flex;
   gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+
+  /* Oculta scrollbar padrão no Chrome/Safari para ficar mais limpo */
+  &::-webkit-scrollbar {
+    height: 4px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: ${({ theme }) => theme.cores.borda};
+    border-radius: 4px;
+  }
 `;
 
 export const Tab = styled.button`
+  flex: 0 0 auto;
+  min-width: 76px;
   padding: 10px 10px;
   border-radius: 14px;
   border: 1px solid ${({ theme }) => theme.cores.borda};
