@@ -11,8 +11,42 @@ import PizzaEntradasVsSaidas from "../../charts/PizzaEntradasVsSaidas";
 import BarrasSaidasPorCategoria from "../../charts/BarrasSaidasPorCategoria";
 import { Label } from "../../ui/Campo";
 import { CampoData } from "../../ui/CampoData.jsx";
+import { Botao } from "../../ui/Botao";
 import { gerarRelatorioMensalPDF } from "../../relatorios/relatorioMensalPDF";
-import { FiTrendingUp, FiTrendingDown, FiClock, FiDollarSign } from "react-icons/fi";
+import { FiTrendingUp, FiTrendingDown, FiClock, FiDollarSign, FiDownload, FiAward, FiStar, FiShield } from "react-icons/fi";
+import styled from "styled-components";
+
+// -- Estilos para Gamificação --
+const XpBarContainer = styled.div`
+  width: 100%;
+  height: 8px;
+  background: rgba(139, 92, 246, 0.15);
+  border-radius: 4px;
+  margin-top: 8px;
+  overflow: hidden;
+`;
+
+const XpBarFill = styled.div`
+  height: 100%;
+  width: ${props => props.percent}%;
+  background: linear-gradient(90deg, #8b5cf6, #d946ef);
+  transition: width 1s ease-out;
+`;
+
+const ConquistaBadge = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: ${props => props.active ? 'rgba(139, 92, 246, 0.1)' : 'rgba(255,255,255,0.02)'};
+  border: 1px solid ${props => props.active ? 'rgba(139, 92, 246, 0.3)' : 'rgba(255,255,255,0.05)'};
+  padding: 12px;
+  border-radius: 12px;
+  opacity: ${props => props.active ? 1 : 0.5};
+  filter: ${props => props.active ? 'none' : 'grayscale(100%)'};
+  transition: all 0.3s ease;
+`;
 
 function agruparSomar(lista, chave) {
   const mapa = new Map();
@@ -24,8 +58,6 @@ function agruparSomar(lista, chave) {
   return Array.from(mapa.entries()).map(([nome, valor]) => ({ nome, valor }));
 }
 
-
-
 export default function Dashboard() {
   const { usuario } = useAuth();
   const { config } = useConfig();
@@ -35,6 +67,9 @@ export default function Dashboard() {
   const [carregando, setCarregando] = useState(true);
   const [gerandoPDF, setGerandoPDF] = useState(false);
   const [cotacoes, setCotacoes] = useState({ usd: null, eur: null });
+  
+  // -- Estado de Gamificação --
+  const [gamificacao, setGamificacao] = useState({ nivel: 1, xp: 0, proximoNivelXp: 1000 });
 
   // Fetch cotações de moedas
   useEffect(() => {
@@ -76,15 +111,11 @@ export default function Dashboard() {
   const entradas = useMemo(() => lancamentos.filter((l) => l.tipo === "entrada"), [lancamentos]);
   const saidas = useMemo(() => lancamentos.filter((l) => l.tipo === "saida"), [lancamentos]);
 
-  // Função auxiliar para somar apenas o que "cai" neste mês (Regime de Caixa adaptado)
+  // Função auxiliar para somar apenas o que "cai" neste mês
   const calcularTotalConsiderandoPagamento = (lista) => {
     return lista.reduce((acc, item) => {
-      // Se não for pago, ignora (saldo real / caixa).
       if (item.status !== "pago") return acc;
-
       let dataEfetiva = item.pagoEm;
-
-      // Se a data efetiva pertencer ao mês atual (mesRef), soma.
       if (dataEfetiva && dataEfetiva.startsWith(mesRef)) {
         return acc + (item.valor || 0);
       }
@@ -101,9 +132,37 @@ export default function Dashboard() {
     () => calcularTotalConsiderandoPagamento(saidas),
     [saidas, mesRef],
   );
+  
+  const saldoLiquido = totalEntradas - totalSaidas;
+
+  // -- Lógica de Gamificação Dinâmica --
+  useEffect(() => {
+    // Calcula XP baseado em boas práticas financeiras
+    let xpCalculado = 0;
+    
+    // +10 XP por cada entrada (trabalho/investimento)
+    xpCalculado += entradas.length * 10;
+    
+    // +50 XP se gastou menos do que ganhou
+    if (saldoLiquido > 0) xpCalculado += 50;
+    
+    // +100 XP a cada 1000 reais guardados/sobrando
+    if (saldoLiquido > 0) {
+      xpCalculado += Math.floor(saldoLiquido / 1000) * 100;
+    }
+    
+    // Calcula nível baseado no XP (1000XP por nível para simplificar)
+    const nivelCalculado = Math.floor(xpCalculado / 1000) + 1;
+    const proximo = nivelCalculado * 1000;
+
+    setGamificacao({
+      nivel: nivelCalculado,
+      xp: xpCalculado,
+      proximoNivelXp: proximo
+    });
+  }, [entradas, saldoLiquido]);
 
   const dadosBarras = useMemo(() => {
-    // Agora o gráfico de "Entradas por origem" também só mostra o que foi pago NO MÊS.
     const entradasEfetivas = entradas.filter((item) => {
       if (item.status !== "pago") return false;
       const dataEfetiva = item.pagoEm;
@@ -114,7 +173,6 @@ export default function Dashboard() {
 
   const dadosBarrasSaidas = useMemo(() => {
     const saidasEfetivas = saidas.filter((item) => {
-      // Para gastos previstos (pendentes) usamos item.data. Para pagos, usamos pagoEm.
       const dataEfetiva = item.status === "pago" ? item.pagoEm : item.data;
       return dataEfetiva && dataEfetiva.startsWith(mesRef);
     });
@@ -146,25 +204,66 @@ export default function Dashboard() {
     }
   }
 
+  const xpPercent = Math.min((gamificacao.xp % 1000) / 10, 100);
+
   return (
     <div style={{ display: "grid", gap: 16 }}>
       <Linha>
         <h3>Dashboard</h3>
 
-        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-          <Label style={{ margin: 0 }}>Mês</Label>
-
-          <CampoData
-            type="month"
-            value={mesRef}
-            onChange={(e) => setMesRef(e.target.value)}
-            style={{ width: 200, paddingRight: 24 }}
-          />
+        <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
+          <Botao onClick={baixarPDF} disabled={gerandoPDF} style={{ display: "flex", gap: "8px", alignItems: "center", background: "#8b5cf6", color: "white" }}>
+            <FiDownload />
+            {gerandoPDF ? "Gerando..." : "Exportar PDF"}
+          </Botao>
+          
+          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+            <Label style={{ margin: 0 }}>Mês</Label>
+            <CampoData
+              type="month"
+              value={mesRef}
+              onChange={(e) => setMesRef(e.target.value)}
+              style={{ width: 160, paddingRight: 24 }}
+            />
+          </div>
         </div>
       </Linha>
 
+      {/* Gamificação / Nível Header */}
+      <Card style={{ background: "linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(0,0,0,0) 100%)", border: "1px solid rgba(139, 92, 246, 0.3)" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+            <div style={{ width: "48px", height: "48px", borderRadius: "50%", background: "#8b5cf6", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 0 15px rgba(139,92,246,0.4)" }}>
+              <FiAward size={24} color="white" />
+            </div>
+            <div>
+              <h4 style={{ margin: 0, color: "#8b5cf6" }}>Investidor Nível {gamificacao.nivel}</h4>
+              <span style={{ fontSize: "13px", color: "gray" }}>{gamificacao.xp} XP / {gamificacao.proximoNivelXp} XP para o Nível {gamificacao.nivel + 1}</span>
+              <XpBarContainer>
+                <XpBarFill percent={xpPercent} />
+              </XpBarContainer>
+            </div>
+          </div>
+          
+          <div style={{ display: "flex", gap: "12px", display: "none" /* Ocultado no mobile via css se necessário */}}>
+            <ConquistaBadge active={saldoLiquido > 0}>
+              <FiTrendingUp size={20} color={saldoLiquido > 0 ? "#10b981" : "gray"} />
+              <span style={{ fontSize: "10px" }}>No Verde</span>
+            </ConquistaBadge>
+            <ConquistaBadge active={entradas.length > 3}>
+              <FiStar size={20} color={entradas.length > 3 ? "#f59e0b" : "gray"} />
+              <span style={{ fontSize: "10px" }}>Ativo</span>
+            </ConquistaBadge>
+            <ConquistaBadge active={saldoLiquido > 1000}>
+              <FiShield size={20} color={saldoLiquido > 1000 ? "#8b5cf6" : "gray"} />
+              <span style={{ fontSize: "10px" }}>Poupador</span>
+            </ConquistaBadge>
+          </div>
+        </div>
+      </Card>
+
       <Grid2 style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "16px" }}>
-        <Card style={{ borderTop: "4px solid #10b981", background: "linear-gradient(180deg, rgba(16,185,129,0.05) 0%, rgba(0,0,0,0) 100%)" }}>
+        <Card style={{ borderTop: "4px solid #10b981", background: "linear-gradient(180deg, rgba(16,185,129,0.05) 0%, rgba(0,0,0,0) 100%)", transition: "transform 0.2s" }} className="hover-scale">
           <div style={{ color: "#9ca3af", display: "flex", justifyContent: "space-between" }}>
             <span>Entradas</span>
             <FiTrendingUp color="#10b981" />
@@ -172,7 +271,7 @@ export default function Dashboard() {
           <h2 style={{ margin: "6px 0 0", fontSize: "28px" }}>{formatarDinheiro(totalEntradas)}</h2>
         </Card>
 
-        <Card style={{ borderTop: "4px solid #ef4444", background: "linear-gradient(180deg, rgba(239,68,68,0.05) 0%, rgba(0,0,0,0) 100%)" }}>
+        <Card style={{ borderTop: "4px solid #ef4444", background: "linear-gradient(180deg, rgba(239,68,68,0.05) 0%, rgba(0,0,0,0) 100%)", transition: "transform 0.2s" }} className="hover-scale">
           <div style={{ color: "#9ca3af", display: "flex", justifyContent: "space-between" }}>
             <span>Saídas</span>
             <FiTrendingDown color="#ef4444" />
@@ -180,13 +279,13 @@ export default function Dashboard() {
           <h2 style={{ margin: "6px 0 0", fontSize: "28px" }}>{formatarDinheiro(totalSaidas)}</h2>
         </Card>
 
-        <Card style={{ borderTop: "4px solid #3b82f6", background: "linear-gradient(180deg, rgba(59,130,246,0.05) 0%, rgba(0,0,0,0) 100%)" }}>
+        <Card style={{ borderTop: "4px solid #3b82f6", background: "linear-gradient(180deg, rgba(59,130,246,0.05) 0%, rgba(0,0,0,0) 100%)", transition: "transform 0.2s" }} className="hover-scale">
           <div style={{ color: "#9ca3af", display: "flex", justifyContent: "space-between" }}>
             <span>Saldo Líquido</span>
             <FiDollarSign color="#3b82f6" />
           </div>
-          <h2 style={{ margin: "6px 0 0", fontSize: "28px", color: (totalEntradas - totalSaidas) >= 0 ? "inherit" : "#ef4444" }}>
-            {formatarDinheiro(totalEntradas - totalSaidas)}
+          <h2 style={{ margin: "6px 0 0", fontSize: "28px", color: saldoLiquido >= 0 ? "inherit" : "#ef4444" }}>
+            {formatarDinheiro(saldoLiquido)}
           </h2>
         </Card>
       </Grid2>

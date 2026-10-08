@@ -5,6 +5,7 @@ import { Campo, Label } from "../../ui/Campo";
 import { Botao, BotaoPerigo } from "../../ui/Botao";
 import { formatarDinheiro } from "../../utils/dinheiro";
 import styled from "styled-components";
+import { SelectCustomizado } from "../../ui/SelectCustomizado";
 
 // --- Styled Components ---
 const ProgressBarContainer = styled.div`
@@ -21,16 +22,6 @@ const ProgressFill = styled.div`
   width: ${(props) => Math.min(props.percent, 100)}%;
   background-color: ${(props) => (props.percent >= 100 ? '#10b981' : '#3b82f6')};
   transition: width 0.4s ease;
-`;
-
-const SelectCampo = styled.select`
-  width: 100%;
-  padding: 12px 12px;
-  border-radius: 12px;
-  border: 1px solid ${({ theme }) => theme.cores.borda};
-  background: transparent;
-  color: ${({ theme }) => theme.cores.texto};
-  outline: none;
 `;
 
 const ImagePreview = styled.img`
@@ -195,16 +186,14 @@ export default function Metas() {
             
             <div>
               <Label>Banco/Corretora de Destino</Label>
-              <SelectCampo 
+              <SelectCustomizado 
                 value={novaMeta.codigoBanco} 
                 onChange={(e) => setNovaMeta({...novaMeta, codigoBanco: e.target.value})}
-              >
-                {BANCOS_BRASIL.map(banco => (
-                  <option key={banco.codigo} value={banco.codigo}>
-                    {banco.codigo} - {banco.nome}
-                  </option>
-                ))}
-              </SelectCampo>
+                options={BANCOS_BRASIL.map(banco => ({
+                  value: banco.codigo,
+                  label: `${banco.codigo} - ${banco.nome}`
+                }))}
+              />
             </div>
             
             <Botao type="submit">Adicionar Meta</Botao>
@@ -217,18 +206,15 @@ export default function Metas() {
           <form onSubmit={handleAdicionarAporte} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
             <div>
               <Label>Selecione a Meta</Label>
-              <SelectCampo 
-                required
+              <SelectCustomizado 
                 value={metaSelecionada} 
                 onChange={(e) => setMetaSelecionada(e.target.value)}
-              >
-                <option value="">-- Escolha uma Meta --</option>
-                {metas.map(meta => (
-                  <option key={meta.id} value={meta.id}>
-                    {meta.titulo} ({formatarDinheiro(meta.valorAtual)} / {formatarDinheiro(meta.valorAlvo)})
-                  </option>
-                ))}
-              </SelectCampo>
+                placeholder="-- Escolha uma Meta --"
+                options={metas.map(meta => ({
+                  value: meta.id,
+                  label: `${meta.titulo} (${formatarDinheiro(meta.valorAtual)} / ${formatarDinheiro(meta.valorAlvo)})`
+                }))}
+              />
             </div>
             
             <div>

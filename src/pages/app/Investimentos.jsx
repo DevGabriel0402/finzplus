@@ -5,6 +5,7 @@ import { Campo, Label } from "../../ui/Campo";
 import { Botao } from "../../ui/Botao";
 import { formatarDinheiro } from "../../utils/dinheiro";
 import styled from "styled-components";
+import { SelectCustomizado } from "../../ui/SelectCustomizado";
 
 // styled component for range inputs
 const RangeInput = styled.input`
@@ -34,16 +35,6 @@ const ProgressSegment = styled.div`
   transition: width 0.3s ease;
 `;
 
-const SelectCampo = styled.select`
-  width: 100%;
-  padding: 12px 12px;
-  border-radius: 12px;
-  border: 1px solid ${({ theme }) => theme.cores.borda};
-  background: transparent;
-  color: ${({ theme }) => theme.cores.texto};
-  outline: none;
-`;
-
 export default function Investimentos() {
   const [regras, setRegras] = useState({ gastos: 70, investimentos: 20, reserva: 10 });
   const [salario, setSalario] = useState("");
@@ -55,6 +46,15 @@ export default function Investimentos() {
   });
   
   const [historico, setHistorico] = useState([]);
+
+  // Simulador state
+  const [simulacao, setSimulacao] = useState({
+    valorInicial: "0",
+    aporteMensal: "500",
+    taxaAnual: "10.5", // default Selic aprox
+    anos: "5"
+  });
+  const [resultadoSimulacao, setResultadoSimulacao] = useState(null);
 
   // Load from localstorage for persistence
   useEffect(() => {
@@ -104,6 +104,37 @@ export default function Investimentos() {
     
     setNovoAporte({ ...novoAporte, valor: "", instituicao: "" });
   };
+
+  const calcularSimulacao = () => {
+    const p = parseFloat(simulacao.valorInicial) || 0;
+    const pmt = parseFloat(simulacao.aporteMensal) || 0;
+    const rAnual = parseFloat(simulacao.taxaAnual) || 0;
+    const t = parseFloat(simulacao.anos) || 0;
+
+    const rMensal = Math.pow(1 + rAnual / 100, 1 / 12) - 1;
+    const n = t * 12;
+
+    let montante = p * Math.pow(1 + rMensal, n);
+    
+    if (rMensal > 0) {
+      montante += pmt * ((Math.pow(1 + rMensal, n) - 1) / rMensal);
+    } else {
+      montante += pmt * n;
+    }
+
+    const totalInvestido = p + (pmt * n);
+    const totalJuros = montante - totalInvestido;
+
+    setResultadoSimulacao({
+      montante,
+      totalInvestido,
+      totalJuros
+    });
+  };
+
+  useEffect(() => {
+    calcularSimulacao();
+  }, [simulacao]);
 
   const salarioNum = parseFloat(salario) || 0;
 
@@ -202,6 +233,76 @@ export default function Investimentos() {
           )}
         </Card>
       </Grid2>
+
+      {/* Simulador de Rendimentos */}
+      <Card style={{ padding: "24px", borderTop: "4px solid #8b5cf6" }}>
+        <h4 style={{ margin: "0 0 8px 0" }}>Simulador de Rendimentos (Juros Compostos)</h4>
+        <p style={{ fontSize: "13px", color: "gray", marginBottom: "20px" }}>
+          Simule o poder dos juros compostos em investimentos do Brasil.
+        </p>
+
+        <Grid2>
+          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+            <div>
+              <Label>Valor Inicial (R$)</Label>
+              <Campo 
+                type="number" 
+                value={simulacao.valorInicial} 
+                onChange={(e) => setSimulacao({...simulacao, valorInicial: e.target.value})} 
+              />
+            </div>
+            <div>
+              <Label>Aporte Mensal (R$)</Label>
+              <Campo 
+                type="number" 
+                value={simulacao.aporteMensal} 
+                onChange={(e) => setSimulacao({...simulacao, aporteMensal: e.target.value})} 
+              />
+            </div>
+            <div>
+              <Label>Tempo (em anos)</Label>
+              <Campo 
+                type="number" 
+                value={simulacao.anos} 
+                onChange={(e) => setSimulacao({...simulacao, anos: e.target.value})} 
+              />
+            </div>
+            <div>
+              <Label>Perfil de Investimento / Taxa (a.a)</Label>
+              <SelectCustomizado 
+                value={simulacao.taxaAnual} 
+                onChange={(e) => setSimulacao({...simulacao, taxaAnual: e.target.value})}
+                options={[
+                  { value: "6.17", label: "Poupança (~6.17% a.a)" },
+                  { value: "10.5", label: "Tesouro Selic / CDI (~10.5% a.a)" },
+                  { value: "11.0", label: "Tesouro Prefixado (~11.0% a.a)" },
+                  { value: "12.0", label: "Bolsa / FIIs (Média Conservadora ~12.0% a.a)" }
+                ]}
+              />
+            </div>
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center" }}>
+            {resultadoSimulacao ? (
+              <div style={{ width: "100%", background: "rgba(139, 92, 246, 0.1)", border: "1px solid rgba(139, 92, 246, 0.3)", borderRadius: "12px", padding: "20px", textAlign: "center" }}>
+                <p style={{ margin: "0 0 5px 0", color: "gray", fontSize: "14px" }}>Valor Total Acumulado</p>
+                <h2 style={{ margin: "0 0 20px 0", color: "#8b5cf6", fontSize: "32px" }}>
+                  {formatarDinheiro(resultadoSimulacao.montante)}
+                </h2>
+                
+                <div style={{ display: "flex", justifyContent: "space-between", marginTop: "10px", fontSize: "14px" }}>
+                  <span style={{ color: "gray" }}>Total Investido:</span>
+                  <strong style={{ color: "gray" }}>{formatarDinheiro(resultadoSimulacao.totalInvestido)}</strong>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", marginTop: "10px", fontSize: "14px" }}>
+                  <span style={{ color: "#10b981" }}>Total em Juros:</span>
+                  <strong style={{ color: "#10b981" }}>+ {formatarDinheiro(resultadoSimulacao.totalJuros)}</strong>
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </Grid2>
+      </Card>
       
       <Grid2>
         <Card>
@@ -209,13 +310,19 @@ export default function Investimentos() {
           <form onSubmit={registrarAporte} style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "16px" }}>
             <div>
               <Label>Tipo de Ativo</Label>
-              <SelectCampo value={novoAporte.tipo} onChange={(e) => setNovoAporte({...novoAporte, tipo: e.target.value})}>
-                <option value="Renda Fixa">Renda Fixa</option>
-                <option value="Reserva de Emergência">Reserva de Emergência</option>
-                <option value="Ações">Ações</option>
-                <option value="FIIs">FIIs</option>
-                <option value="Cripto">Cripto</option>
-              </SelectCampo>
+              <SelectCustomizado 
+                value={novoAporte.tipo} 
+                onChange={(e) => setNovoAporte({...novoAporte, tipo: e.target.value})}
+                options={[
+                  { value: "Tesouro Selic", label: "Tesouro Selic" },
+                  { value: "Tesouro IPCA / Prefixado", label: "Tesouro IPCA / Prefixado" },
+                  { value: "CDB / LCI / LCA", label: "CDB / LCI / LCA" },
+                  { value: "Ações Brasileiras (B3)", label: "Ações Brasileiras (B3)" },
+                  { value: "Fundos Imobiliários (FIIs)", label: "Fundos Imobiliários (FIIs)" },
+                  { value: "Exterior / BDRs", label: "Exterior / BDRs" },
+                  { value: "Criptomoedas", label: "Criptomoedas" }
+                ]}
+              />
             </div>
             
             <div>
@@ -234,7 +341,7 @@ export default function Investimentos() {
               <Campo 
                 type="text" 
                 required 
-                placeholder="Ex: NuInvest, Rico, XP"
+                placeholder="Ex: NuInvest, Rico, XP, Banco Inter"
                 value={novoAporte.instituicao} 
                 onChange={(e) => setNovoAporte({...novoAporte, instituicao: e.target.value})} 
               />
